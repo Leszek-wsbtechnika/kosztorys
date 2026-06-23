@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<!-- Autor: Leszek Dąbrowski | e-mail: ldabrovvski@gmail.com -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kosztorys naprawy — pojazdy i maszyny</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.105.1" integrity="sha384-sfbOag7cEcqn2DK53T/iBNAH/2cMCf7bSzJDwBhV117A0z/NIj9Usei1jKIBY1Ae" crossorigin="anonymous"></script>
+<style>
+:root{
+  --bg:#000d1c; --surface:#021735; --surface2:#062547;
+  --border:rgba(120,170,235,.16);
+  --accent:#ff5722; --accent2:#ffc107;
+  --red:#d12d3e; --green:#1fb673;
+  --text:#e8eef9; --muted:#7c8aa3;
+  --header-bg:#000814; --primary:#5b8def; --primary-2:#3a6fd9;
+  --card-radius:2px;
+  --shadow-cta:0 4px 14px rgba(255,87,34,.28);
+  --shadow-cta-hover:0 6px 22px rgba(255,87,34,.42);
+  --font-mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  --font-sans:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  --font-display:'Archivo','Hanken Grotesk',system-ui,sans-serif;
+  --font-serif:'Georgia','Charter','Cambria',serif;
+  /* aliasy zgodności ze starymi selektorami JS/HTML */
+  --ink:var(--text); --line:var(--border); --panel:var(--surface);
+  --accent-d:var(--primary); --ok:var(--green); --warn:var(--accent2); --danger:var(--red);
+  --head:var(--header-bg); --zebra:rgba(120,170,235,.045);
+}
+:root.day-theme{
+  --bg:#eef1f5; --surface:#ffffff; --surface2:#f3f6fb;
+  --border:rgba(0,61,122,.18);
+  --accent:#ff5722; --accent2:#e64a19;
+  --red:#c0392b; --green:#1a7a45;
+  --text:#0a1628; --muted:#5e6b80;
+  --header-bg:#001e3d; --primary:#003d7a; --primary-2:#002e5d;
+  --zebra:#f6f8fb;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font-sans);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:hidden}
+h1,h2,h3{margin:0;font-weight:700;font-family:var(--font-display)}
+button{font-family:var(--font-mono);cursor:pointer}
+input,select,textarea{font-family:var(--font-mono);font-size:13px;color:var(--text)}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px 80px}
+
+/* ===== Header / toolbar (Skybound) ===== */
+.appbar{position:sticky;top:0;z-index:50;background:var(--header-bg);color:#fff;
+  padding:14px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;overflow:hidden;
+  box-shadow:0 2px 14px rgba(0,0,0,.35)}
+.appbar::before{content:'';position:absolute;top:0;right:0;width:280px;height:100%;
+  background:var(--accent);clip-path:polygon(42% 0,100% 0,100% 100%,0 100%);opacity:.9;z-index:0;pointer-events:none}
+.appbar::after{content:'';position:absolute;top:0;right:210px;width:110px;height:100%;
+  background:var(--accent2);clip-path:polygon(52% 0,100% 0,48% 100%,0 100%);opacity:.5;z-index:0;pointer-events:none}
+.appbar>*{position:relative;z-index:1}
+.appbar .brand{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:800;
+  font-size:18px;letter-spacing:-.3px;text-transform:uppercase;color:#fff}
+.appbar .brand span{color:var(--accent2)}
+.appbar .brand svg{flex:0 0 auto}
+.appbar .spacer{flex:1}
+.tbtn{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.2);padding:8px 13px;
+  border-radius:3px;font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  display:inline-flex;align-items:center;gap:6px;transition:border-color .15s,background .15s,color .15s,box-shadow .15s,transform .15s}
+.tbtn:hover{border-color:var(--accent);color:var(--accent2);background:rgba(255,87,34,.12)}
+.tbtn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-family:var(--font-display);font-weight:700;box-shadow:var(--shadow-cta)}
+.tbtn.primary:hover{background:#e64a19;color:#fff;transform:translateY(-1px);box-shadow:var(--shadow-cta-hover)}
+.tbtn.ok{background:var(--green);border-color:var(--green);color:#fff}
+.tbtn.ok:hover{background:#179c61;color:#fff}
+.theme-toggle{background:var(--accent);border:2px solid var(--header-bg);color:var(--header-bg);width:38px;height:38px;
+  border-radius:3px;display:flex;align-items:center;justify-content:center;transition:.18s;flex:0 0 auto}
+.theme-toggle:hover{background:var(--header-bg);border-color:var(--accent);color:var(--accent)}
+.theme-toggle .icon-sun{display:none}.theme-toggle .icon-moon{display:block}
+.day-theme .theme-toggle .icon-sun{display:block}.day-theme .theme-toggle .icon-moon{display:none}
+.conn{font-family:var(--font-mono);font-size:11px;color:rgba(255,255,255,.82);display:flex;align-items:center;gap:6px;
+  text-transform:uppercase;letter-spacing:.05em}
+.conn .dot{width:9px;height:9px;border-radius:50%;background:#7f8c9b}
+.conn.on .dot{background:var(--green);box-shadow:0 0 6px var(--green)}
+
+/* ===== Panele / dokument ===== */
+.doc{background:var(--surface);margin:20px 0;border:1px solid var(--border);border-left:4px solid var(--primary);
+  border-radius:var(--card-radius);overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.18)}
+.day-theme .doc{box-shadow:0 2px 12px rgba(0,30,61,.06)}
+.doc-head{background:var(--surface2);border-bottom:1px solid var(--border);padding:13px 18px;display:flex;align-items:center;gap:12px}
+.doc-head h2{flex:0 0 auto;display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;
+  font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--text);line-height:1}
+.doc-head h2::before{content:'';width:4px;height:16px;background:var(--accent);border-radius:1px;flex:0 0 auto}
+.doc-head .badge{margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0}
+.doc-body{padding:16px 18px}
+
+/* ===== Pola formularza ===== */
+.grid{display:grid;gap:12px 16px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}.g4{grid-template-columns:repeat(4,1fr)}
+.fld{display:flex;flex-direction:column;gap:4px}
+.fld label{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:500}
+input[type=text],input[type=number],input[type=date],input[type=email],select,textarea,
+.fld input,.fld select,.fld textarea{background:var(--bg);border:1px solid var(--border);border-radius:2px;color:var(--text);
+  font-family:var(--font-mono);font-size:12px;padding:9px 10px;width:100%;outline:none;transition:border-color .15s,box-shadow .15s}
+.day-theme input,.day-theme select,.day-theme textarea{background:var(--surface)}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.7}
+input:focus,select:focus,textarea:focus,.fld input:focus,.fld select:focus,.fld textarea:focus{
+  border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,87,34,.14)}
+.stawki .fld input{text-align:right}
+
+/* ===== Tabele ===== */
+.tbl-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--header-bg);color:#fff;font-family:var(--font-display);font-weight:700;font-size:10px;
+  text-transform:uppercase;letter-spacing:.06em;padding:9px 8px;text-align:left;white-space:nowrap;border-bottom:2px solid var(--accent)}
+tbody td{padding:4px 6px;border-bottom:1px solid var(--border);vertical-align:middle}
+tbody tr:nth-child(even){background:var(--zebra)}
+td input,td select{width:100%;border:1px solid transparent;background:transparent;padding:6px;border-radius:2px;color:var(--text);font-size:12px}
+td input:hover,td select:hover{border-color:var(--border)}
+td input:focus,td select:focus{border-color:var(--accent);background:var(--bg);box-shadow:0 0 0 2px rgba(255,87,34,.14)}
+.day-theme td input:focus,.day-theme td select:focus{background:var(--surface)}
+td.num input{text-align:right}
+td.val{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap;color:var(--text)}
+td.lp{text-align:center;color:var(--muted);width:34px;font-family:var(--font-mono)}
+.rowdel{background:none;border:none;color:var(--red);font-size:16px;line-height:1;padding:2px 6px}
+.rowdel:hover{color:#ff6b6b}
+.tfoot-add{padding:12px 10px;display:flex;gap:8px;flex-wrap:wrap}
+.addbtn{background:transparent;color:var(--accent);border:1px dashed var(--accent);padding:8px 14px;border-radius:3px;
+  font-family:var(--font-display);font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.addbtn:hover{background:rgba(255,87,34,.1)}
+.addbtn.cat{color:var(--green);border-color:var(--green)}
+.addbtn.cat:hover{background:rgba(31,182,115,.12)}
+.subtotal{text-align:right;font-family:var(--font-display);font-weight:700;color:var(--text);padding:10px 14px;
+  background:var(--surface2);border-top:2px solid var(--border);text-transform:uppercase;font-size:12px;letter-spacing:.04em}
+.subtotal span{color:var(--accent2);font-size:14px;margin-left:6px}
+
+/* ===== Podsumowanie ===== */
+.recap{display:grid;grid-template-columns:1fr 360px;gap:18px}
+.recap .notes textarea{width:100%;min-height:120px;resize:vertical}
+.sumbox{border:1px solid var(--border);border-radius:2px;overflow:hidden}
+.sumrow{display:flex;justify-content:space-between;padding:8px 13px;border-bottom:1px solid var(--border);
+  font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:12px}
+.sumrow .lbl{color:var(--muted)}
+.sumrow .amt{font-weight:600;color:var(--text)}
+.sumrow.net{background:var(--surface2)}
+.sumrow.net .lbl,.sumrow.net .amt{font-family:var(--font-display);font-size:14px;color:var(--text)}
+.sumrow.gross{background:var(--accent);color:#fff}
+.sumrow.gross .lbl{color:rgba(255,255,255,.85)}
+.sumrow.gross .amt{color:#fff;font-size:16px;font-weight:800;font-family:var(--font-display)}
+.sumrow.final{background:var(--primary)}
+.sumrow.final .lbl{color:rgba(255,255,255,.85)}
+.sumrow.final .amt{color:#fff;font-size:16px;font-weight:800;font-family:var(--font-display)}
+.sumrow.corr .amt{color:var(--red)}
+.sumrow.corr.add .amt{color:var(--green)}
+.basis{display:flex;gap:8px;align-items:center;padding:9px 13px;background:var(--surface);border-bottom:1px solid var(--border)}
+.basis label{font-family:var(--font-mono);font-size:11px;color:var(--muted);text-transform:uppercase}
+.basis select{width:auto}
+
+/* ===== Modal ===== */
+.overlay{position:fixed;inset:0;background:rgba(0,8,20,.78);backdrop-filter:blur(5px);display:none;align-items:flex-start;
+  justify-content:center;z-index:100;padding:40px 16px;overflow:auto}
+.overlay.on{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:6px;width:100%;max-width:720px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.modal-head{padding:15px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.modal-head h3{font-family:var(--font-display);font-size:15px;color:var(--text);text-transform:uppercase;letter-spacing:.04em}
+.modal-head .x{margin-left:auto;background:none;border:none;font-size:22px;color:var(--muted);line-height:1}
+.modal-head .x:hover{color:var(--accent)}
+.modal-body{padding:16px 18px}
+.modal-body .login-field{margin-bottom:12px}
+.search-in{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:2px;margin-bottom:10px;
+  background:var(--bg);color:var(--text);font-family:var(--font-mono)}
+.day-theme .search-in{background:var(--surface)}
+.picker-list{max-height:46vh;overflow:auto;border:1px solid var(--border);border-radius:2px}
+.pick{display:flex;align-items:center;gap:10px;padding:9px 11px;border-bottom:1px solid var(--border);cursor:pointer}
+.pick:hover{background:var(--surface2)}
+.pick img{width:42px;height:42px;object-fit:cover;border-radius:3px;background:var(--surface2);flex:0 0 auto}
+.pick .nfo{flex:1;min-width:0}
+.pick .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.pick .meta{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.pick .pr{font-family:var(--font-mono);font-weight:700;color:var(--accent2);white-space:nowrap}
+.msg{padding:9px 11px;border-radius:2px;font-size:12px;margin-top:8px;display:none;font-family:var(--font-mono)}
+.msg.show{display:block}
+.msg.error{background:rgba(209,45,62,.14);color:#ff7a86;border:1px solid rgba(209,45,62,.3)}
+.day-theme .msg.error{color:var(--red)}
+.msg.ok{background:rgba(31,182,115,.14);color:var(--green);border:1px solid rgba(31,182,115,.3)}
+.msg.info{background:rgba(91,141,239,.14);color:var(--primary);border:1px solid rgba(91,141,239,.3)}
+.hint{font-family:var(--font-sans);font-size:12px;color:var(--muted);margin:2px 0 0}
+
+/* ===== Toast ===== */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:200;background:var(--header-bg);color:#fff;
+  padding:12px 20px;border-radius:3px;font-family:var(--font-mono);font-size:13px;border-left:3px solid var(--accent);
+  box-shadow:0 6px 24px rgba(0,0,0,.5);opacity:0;transition:opacity .25s,transform .25s;pointer-events:none}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+#toast.error{border-left-color:var(--red)} #toast.ok{border-left-color:var(--green)}
+
+.print-only{display:none}
+
+/* ===== Responsywność ===== */
+@media(max-width:640px){
+  .appbar{padding:12px 16px;gap:10px}.appbar::before,.appbar::after{display:none}
+  .g4,.g3,.g2{grid-template-columns:1fr 1fr}
+  .recap{grid-template-columns:1fr}
+}
+
+/* ============ PRINT — czysty A4: bez wypełnień, ramki = szara linia przerywana ============ */
+@media print{
+  :root,:root.day-theme{--bg:#fff;--surface:#fff;--surface2:#fff;--text:#000;--muted:#444;--border:#999;--zebra:#fff}
+  @page{size:A4;margin:14mm 12mm}
+  body{background:#fff;color:#000;font-family:var(--font-serif);font-size:11px}
+  .appbar,.overlay,.addbtn,.rowdel,.tfoot-add,.no-print,#toast,.theme-toggle,.basis{display:none !important}
+  .wrap{max-width:none;padding:0}
+  .print-only{display:block}
+  .doc{box-shadow:none;border:1px dashed #999;border-left:1px dashed #999;margin:0 0 8px;border-radius:0;break-inside:avoid;background:#fff}
+  .doc-head{background:#fff !important;border-bottom:1px dashed #999}
+  .doc-head h2{color:#000;font-family:var(--font-serif)}
+  .doc-head h2::before{background:#000}
+  table{border:1px dashed #999}
+  thead th{background:#fff !important;color:#000 !important;border:1px dashed #999;border-bottom:1px solid #000;font-family:var(--font-serif)}
+  tbody td{border-bottom:1px dashed #bbb}
+  tbody tr:nth-child(even){background:#fff !important}
+  td input,td select,.fld input,.fld select,.fld textarea,.search-in{border:none !important;background:transparent !important;
+    box-shadow:none !important;color:#000 !important;-webkit-appearance:none;appearance:none;padding:2px;font-family:var(--font-serif)}
+  .fld label{color:#333}
+  td.val,.subtotal span,.sumrow .amt{color:#000 !important}
+  .subtotal{background:#fff !important;border-top:1px dashed #999;color:#000}
+  .sumbox{border:1px dashed #999}
+  .sumrow{border-bottom:1px dashed #bbb}
+  .sumrow .lbl,.sumrow .amt{color:#000 !important}
+  .sumrow.net,.sumrow.gross,.sumrow.final{background:#fff !important;color:#000 !important}
+  .sumrow.net .amt,.sumrow.gross .amt,.sumrow.final .amt,
+  .sumrow.net .lbl,.sumrow.gross .lbl,.sumrow.final .lbl{color:#000 !important}
+  .sumrow.gross,.sumrow.final{border-top:1.5px solid #000}
+  .sumrow.final{border-bottom:1.5px solid #000}
+  .recap{grid-template-columns:1fr 320px}
+  .badge{display:none !important}
+  tr.zero{display:none !important}   /* ukryj pozycje o wartości 0 */
+  select{-webkit-appearance:none;appearance:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ APPBAR ============ -->
+<div class="appbar no-print">
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#9fc3ee" stroke-width="1.6">
+      <path d="M3 13l2-5h11l3 5"/><path d="M2 13h19"/><circle cx="7" cy="16" r="2"/><circle cx="16" cy="16" r="2"/>
+    </svg>
+    KOSZTORYS <span>· pojazdy i maszyny</span>
+  </div>
+  <div class="spacer"></div>
+  <span class="conn" id="conn"><span class="dot"></span><span id="conn-txt">Offline</span></span>
+  <button class="tbtn primary" id="btn-connect" onclick="openLogin()">🔗 Połącz z katalogiem</button>
+  <button class="tbtn" onclick="importJsonPick()">📂 Wczytaj</button>
+  <button class="tbtn" onclick="saveJson()">💾 Zapisz</button>
+  <button class="tbtn" onclick="exportXlsx()">⬇ XLSX</button>
+  <button class="tbtn ok" onclick="window.print()">🖨 Drukuj</button>
+  <button class="tbtn" onclick="resetAll()" title="Nowy kosztorys">✖</button>
+  <button class="theme-toggle" onclick="toggleTheme()" title="Zmień motyw" aria-label="Zmień motyw">
+    <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+  </button>
+</div>
+
+<div class="wrap">
+
+  <!-- Tytuł do druku -->
+  <div class="print-only" style="text-align:center;margin:0 0 10px">
+    <h1 style="font-size:18px">KOSZTORYS NAPRAWY</h1>
+  </div>
+
+  <!-- ===== Nagłówek / identyfikacja ===== -->
+  <div class="doc">
+    <div class="doc-head"><h2>Dane kosztorysu</h2></div>
+    <div class="doc-body">
+      <div class="grid g4">
+        <div class="fld"><label>Nr kosztorysu</label><input id="m-nr" oninput="touch()"></div>
+        <div class="fld"><label>Data</label><input type="date" id="m-data" oninput="touch()"></div>
+        <div class="fld"><label>Sporządzający</label><input id="m-sporz" placeholder="rzeczoznawca / warsztat" oninput="touch()"></div>
+        <div class="fld"><label>Zleceniodawca / poszkodowany</label><input id="m-zlec" oninput="touch()"></div>
+        <div class="fld"><label>Ubezpieczyciel</label><input id="m-ubez" oninput="touch()"></div>
+        <div class="fld"><label>Nr szkody</label><input id="m-szkoda" oninput="touch()"></div>
+        <div class="fld"><label>Nr polisy</label><input id="m-polisa" oninput="touch()"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Dane obiektu ===== -->
+  <div class="doc">
+    <div class="doc-head"><h2>Dane pojazdu / maszyny</h2></div>
+    <div class="doc-body">
+      <div class="grid g4">
+        <div class="fld"><label>Typ</label>
+          <select id="o-typ" oninput="touch()">
+            <option>Naczepa</option><option>Przyczepa</option><option>Ciągnik rolniczy</option>
+            <option>Maszyna rolnicza</option><option>Maszyna budowlana</option><option>Inny pojazd</option>
+          </select></div>
+        <div class="fld"><label>Marka</label><input id="o-marka" oninput="touch()"></div>
+        <div class="fld"><label>Model / typ</label><input id="o-model" oninput="touch()"></div>
+        <div class="fld"><label>VIN / nr fabryczny</label><input id="o-vin" oninput="touch()"></div>
+        <div class="fld"><label>Nr rejestracyjny</label><input id="o-rej" oninput="touch()"></div>
+        <div class="fld"><label>Rok produkcji</label><input id="o-rok" oninput="touch()"></div>
+        <div class="fld"><label>Przebieg / mth</label><input id="o-przebieg" oninput="touch()"></div>
+        <div class="fld"><label>Data 1. rejestracji</label><input type="date" id="o-data1" oninput="touch()"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Parametry stawek ===== -->
+  <div class="doc stawki">
+    <div class="doc-head"><h2>Parametry kalkulacji (stawki)</h2>
+      <span class="badge no-print">domyślne dla nowych pozycji — wartości per-pozycja edytujesz w tabelach</span></div>
+    <div class="doc-body">
+      <div class="grid g4">
+        <div class="fld"><label>Stawka rbg — blacharska (zł)</label><input type="number" id="s-bl" value="120" oninput="onStawki()"></div>
+        <div class="fld"><label>Stawka rbg — mechaniczna (zł)</label><input type="number" id="s-mech" value="120" oninput="onStawki()"></div>
+        <div class="fld"><label>Stawka rbg — lakiernicza (zł)</label><input type="number" id="s-lak" value="130" oninput="onStawki()"></div>
+        <div class="fld"><label>Wskaźnik materiału lak. (% robocizny lak.)</label><input type="number" id="s-matlak" value="40" oninput="onStawki()"></div>
+        <div class="fld"><label>Materiały pomocnicze (% robocizny)</label><input type="number" id="s-matpom" value="2" oninput="onStawki()"></div>
+        <div class="fld"><label>Rabat na części — domyślny (%)</label><input type="number" id="s-rabat" value="0" oninput="onStawki()"></div>
+        <div class="fld"><label>Potrącenie amortyzacyjne — domyślne (%)</label><input type="number" id="s-amort" value="0" oninput="onStawki()"></div>
+        <div class="fld"><label>VAT (%)</label><input type="number" id="s-vat" value="23" oninput="onStawki()"></div>
+        <div class="fld"><label>Merkantylny ubytek wartości (zł)</label><input type="number" id="s-ubytek" value="0" oninput="onStawki()"></div>
+        <div class="fld"><label>Udział własny (zł)</label><input type="number" id="s-udzial" value="0" oninput="onStawki()"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Części ===== -->
+  <div class="doc">
+    <div class="doc-head"><h2>Części zamienne</h2></div>
+    <div class="doc-body" style="padding:0">
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr>
+            <th>Lp</th><th>Nr katalogowy</th><th>Nazwa części</th><th style="width:60px">Ilość</th>
+            <th style="width:110px">Cena netto (zł)</th><th style="width:70px">Rodzaj</th>
+            <th style="width:70px">Rabat %</th><th style="width:90px">Potrąc. amort. %</th>
+            <th style="width:110px">Wartość netto</th><th class="no-print" style="width:34px"></th>
+          </tr></thead>
+          <tbody id="tb-czesci"></tbody>
+        </table>
+      </div>
+      <div class="tfoot-add">
+        <button class="addbtn" onclick="openEntry()">＋ Dodaj pozycję</button>
+        <button class="addbtn" onclick="addCzesc()">pusty wiersz</button>
+        <button class="addbtn cat" onclick="openPicker()">📥 Dodaj z katalogu</button>
+      </div>
+      <div class="subtotal">Razem części (netto, po rabatach i potrąceniach): <span id="st-czesci">0,00 zł</span></div>
+    </div>
+  </div>
+
+  <!-- ===== Robocizna ===== -->
+  <div class="doc">
+    <div class="doc-head"><h2>Robocizna naprawcza</h2></div>
+    <div class="doc-body" style="padding:0">
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr>
+            <th>Lp</th><th>Opis operacji</th><th style="width:130px">Kategoria</th>
+            <th style="width:90px">Rodzaj</th><th style="width:90px">Czas (rbg)</th>
+            <th style="width:100px">Stawka (zł)</th><th style="width:110px">Wartość</th>
+            <th class="no-print" style="width:34px"></th>
+          </tr></thead>
+          <tbody id="tb-robocizna"></tbody>
+        </table>
+      </div>
+      <div class="tfoot-add"><button class="addbtn" onclick="openEntry()">＋ Dodaj pozycję</button>
+        <button class="addbtn" onclick="addRobocizna()">pusty wiersz</button></div>
+      <div class="subtotal">Razem robocizna naprawcza: <span id="st-robocizna">0,00 zł</span></div>
+    </div>
+  </div>
+
+  <!-- ===== Lakierowanie ===== -->
+  <div class="doc">
+    <div class="doc-head"><h2>Lakierowanie</h2>
+      <span class="badge no-print">materiał: zostaw 0 → liczony jako % robocizny (wskaźnik); wpisz kwotę → ma pierwszeństwo</span></div>
+    <div class="doc-body" style="padding:0">
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr>
+            <th>Lp</th><th>Element</th><th style="width:90px">Pow. (m²)</th>
+            <th style="width:100px">Czas (rbg)</th><th style="width:110px">Robocizna</th>
+            <th style="width:120px">Materiał (zł)</th><th style="width:110px">Wartość</th>
+            <th class="no-print" style="width:34px"></th>
+          </tr></thead>
+          <tbody id="tb-lakier"></tbody>
+        </table>
+      </div>
+      <div class="tfoot-add"><button class="addbtn" onclick="addLakier()">＋ Dodaj element</button></div>
+      <div class="subtotal">Razem lakierowanie (robocizna + materiał): <span id="st-lakier">0,00 zł</span></div>
+    </div>
+  </div>
+
+  <!-- ===== Materiały dodatkowe i normalia ===== -->
+  <div class="doc">
+    <div class="doc-head"><h2>Materiały dodatkowe i normalia</h2>
+      <span class="badge no-print">materiały pomocnicze (% robocizny) liczone automatycznie w podsumowaniu</span></div>
+    <div class="doc-body" style="padding:0">
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>Lp</th><th>Opis</th><th style="width:140px">Kwota netto (zł)</th>
+            <th class="no-print" style="width:34px"></th></tr></thead>
+          <tbody id="tb-matdod"></tbody>
+        </table>
+      </div>
+      <div class="tfoot-add"><button class="addbtn" onclick="addMatDod()">＋ Dodaj pozycję</button></div>
+      <div class="subtotal">Razem materiały dodatkowe i normalia: <span id="st-matdod">0,00 zł</span></div>
+    </div>
+  </div>
+
+  <!-- ===== Podsumowanie ===== -->
+  <div class="doc">
+    <div class="doc-head"><h2>Podsumowanie</h2></div>
+    <div class="doc-body">
+      <div class="recap">
+        <div class="notes">
+          <div class="fld"><label>Uwagi</label><textarea id="m-uwagi" oninput="touch()"
+            placeholder="Zakres uszkodzeń, założenia kalkulacji, uwagi do naprawy…"></textarea></div>
+          <div class="grid g2" style="margin-top:14px">
+            <div class="fld"><label>Podpis sporządzającego</label><input id="m-podpis1" oninput="touch()"></div>
+            <div class="fld"><label>Data / podpis zleceniodawcy</label><input id="m-podpis2" oninput="touch()"></div>
+          </div>
+        </div>
+        <div class="sumbox" id="sumbox"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="print-only" style="font-size:9px;color:#666;text-align:center;margin-top:6px">
+    Kosztorys sporządzony w programie autorskim · L. Dąbrowski · normy czasowe i ceny wg danych własnych
+  </div>
+</div>
+
+<!-- ============ MODAL: login ============ -->
+<div class="overlay" id="ov-login">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head"><h3>Połącz z katalogsystem.pl</h3><button class="x" onclick="closeOverlay('ov-login')">×</button></div>
+    <div class="modal-body">
+      <div id="login-step1">
+        <div class="login-field fld"><label>Adres e-mail</label>
+          <input class="search-in" type="email" id="login-email" placeholder="twój@email.com" onkeydown="if(event.key==='Enter')sendOtpCode()"></div>
+        <button class="tbtn primary" style="width:100%" id="login-btn" onclick="sendOtpCode()">Wyślij kod</button>
+      </div>
+      <div id="login-step2" style="display:none">
+        <p class="hint" id="login-otp-hint"></p>
+        <div class="login-field fld"><label>Kod weryfikacyjny (8 cyfr)</label>
+          <input class="search-in" type="text" id="login-code" placeholder="00000000" maxlength="8" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyOtpCode()"></div>
+        <button class="tbtn primary" style="width:100%" id="login-verify-btn" onclick="verifyOtpCode()">Weryfikuj i połącz</button>
+        <button class="tbtn" style="width:100%;margin-top:8px" onclick="loginStep(1)">← Zmień e-mail</button>
+      </div>
+      <div class="msg" id="login-msg"></div>
+      <p class="hint" style="margin-top:12px">Logujesz się tym samym kontem co w katalogu. Po połączeniu wybierzesz części z bazy do kosztorysu.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: picker części ============ -->
+<div class="overlay" id="ov-picker">
+  <div class="modal">
+    <div class="modal-head"><h3>Wybierz części z katalogu</h3>
+      <span class="badge" id="picker-count" style="color:var(--muted);font-size:12px"></span>
+      <button class="x" onclick="closeOverlay('ov-picker')">×</button></div>
+    <div class="modal-body">
+      <select class="search-in" id="picker-cat" onchange="renderPicker()"><option value="">Wszystkie kategorie</option></select>
+      <input class="search-in" id="picker-search" placeholder="Szukaj — wiele słów = każde osobno (np. drzwi Krone)" oninput="renderPicker()">
+      <div class="picker-list" id="picker-list"></div>
+      <p class="hint" style="margin-top:8px">Kliknij część, aby dodać ją do kosztorysu (nazwa + cena netto → Części; nazwa → Robocizna, rodzaj W, czas do uzupełnienia). Możesz dodać wiele.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: pełna pozycja (część + robocizna + lakier) ============ -->
+<div class="overlay" id="ov-entry">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-head"><h3>Dodaj pozycję</h3><button class="x" onclick="closeOverlay('ov-entry')">×</button></div>
+    <div class="modal-body">
+      <div class="fld" style="margin-bottom:12px"><label>Nazwa części / operacji</label>
+        <input class="search-in" id="e-nazwa" style="margin:0" placeholder="np. Błotnik tylny lewy" onkeydown="if(event.key==='Enter')submitEntry()"></div>
+      <div class="grid g2" style="margin-bottom:12px">
+        <div class="fld"><label>Nr katalogowy</label><input id="e-nrkat" onkeydown="if(event.key==='Enter')submitEntry()"></div>
+        <div class="fld"><label>Rodzaj części</label><select id="e-rodzaj"><option>O</option><option>Q</option><option>P</option><option>Z</option></select></div>
+        <div class="fld"><label>Cena części netto (zł)</label><input type="number" min="0" step="0.01" id="e-cena" placeholder="puste = brak części" onkeydown="if(event.key==='Enter')submitEntry()"></div>
+        <div class="fld"><label>Ilość</label><input type="number" min="0" step="1" id="e-ilosc" value="1" onkeydown="if(event.key==='Enter')submitEntry()"></div>
+      </div>
+      <div class="grid g3" style="margin-bottom:8px">
+        <div class="fld"><label>Robocizna naprawcza (rbg)</label><input type="number" min="0" step="0.1" id="e-robn" placeholder="0" onkeydown="if(event.key==='Enter')submitEntry()"></div>
+        <div class="fld"><label>Kategoria</label><select id="e-katn"><option>BL</option><option>MECH</option><option>EL</option><option>DEM-MONT</option></select></div>
+        <div class="fld"><label>Rodzaj</label><select id="e-rodzn"><option>W</option><option>N</option><option>Wym/Zam</option></select></div>
+      </div>
+      <div class="grid g3" style="margin-bottom:6px">
+        <div class="fld"><label>Robocizna lakiernicza (rbg)</label><input type="number" min="0" step="0.1" id="e-robl" placeholder="0" onkeydown="if(event.key==='Enter')submitEntry()"></div>
+      </div>
+      <div class="msg" id="entry-msg"></div>
+      <p class="hint" style="margin:6px 0 12px">Pozycja trafia do bloków zależnie od wypełnionych pól: <b>cena/nr kat.</b> → Części · <b>robocizna naprawcza</b> → Robocizna · <b>robocizna lakiernicza</b> → Lakierowanie.</p>
+      <button class="tbtn primary" style="width:100%" onclick="submitEntry()">Dodaj do kosztorysu</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="json-file" accept="application/json,.json" style="display:none" onchange="importJsonFile(event)">
+<div id="toast"></div>
+
+<script>
+/* ================= Motyw (Skybound day/night) ================= */
+const THEME_KEY='theme';
+function applyTheme(t){ document.documentElement.classList.toggle('day-theme', t==='day'); }
+function toggleTheme(){ const cur=localStorage.getItem(THEME_KEY)||'night'; const next=cur==='day'?'night':'day'; localStorage.setItem(THEME_KEY,next); applyTheme(next); }
+
+/* ================= Supabase (ten sam projekt co katalog) ================= */
+const SUPABASE_URL = 'https://visyqdyuyistjslrpfoi.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpc3lxZHl1eWlzdGpzbHJwZm9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY5NDgyOTQsImV4cCI6MjA5MjUyNDI5NH0.Yv4_ja4yBwXQbkxQs8fPHdasv9BMXFIV0H9MykqBtKk';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let _otpEmail = '', _connected = false, catalogParts = [];
+
+/* ================= Stan ================= */
+const LS_KEY = 'kosztorys_v1';
+let K = blankState();
+let idc = 1;
+const uid = () => idc++;
+
+function blankState(){
+  return {
+    meta:{ nr:'', data:new Date().toISOString().slice(0,10), sporz:'', zlec:'', ubez:'', szkoda:'', polisa:'' },
+    obiekt:{ typ:'Naczepa', marka:'', model:'', vin:'', rej:'', rok:'', przebieg:'', data1:'' },
+    stawki:{ bl:120, mech:120, lak:130, matlak:40, matpom:2, rabat:0, amort:0, vat:23, ubytek:0, udzial:0 },
+    czesci:[], robocizna:[], lakier:[], matdod:[],
+    uwagi:'', podpis1:'', podpis2:'', podstawa:'brutto'
+  };
+}
+
+/* ================= Helpers ================= */
+function round2(n){ return Math.round((+n||0)*100)/100; }
+function fmtPl(n){ return (Math.round((+n||0)*100)/100).toLocaleString('pl-PL',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function zl(n){ return fmtPl(n)+' zł'; }
+function num(v){ const n=parseFloat(String(v).replace(',','.')); return isNaN(n)?0:n; }
+function $(id){ return document.getElementById(id); }
+function toast(msg,type='',ms=2600){ const t=$('toast'); t.textContent=msg; t.className='show '+type; setTimeout(()=>t.className='',ms); }
+function markZero(cell,isZero){ if(cell&&cell.closest){ const tr=cell.closest('tr'); if(tr) tr.classList.toggle('zero',isZero); } }
+let _saveT=null;
+function touch(){ readMetaFromDom(); clearTimeout(_saveT); _saveT=setTimeout(persist,400); }
+
+/* ================= Stawki: zwróć stawkę rbg wg kategorii ================= */
+function stawkaFor(kat){
+  if(kat==='BL') return K.stawki.bl;
+  return K.stawki.mech; // MECH / EL / DEM-MONT korzystają ze stawki mechanicznej
+}
+
+/* ================= Render wierszy ================= */
+function tdInput(val,attrs,oninput){ return `<input value="${val??''}" ${attrs} oninput="${oninput}">`; }
+
+function renderCzesci(){
+  const tb=$('tb-czesci'); tb.innerHTML='';
+  K.czesci.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td class="lp">${i+1}</td>
+      <td><input value="${esc(r.nrKat)}" oninput="upd('czesci',${r.id},'nrKat',this.value)"></td>
+      <td><input value="${esc(r.nazwa)}" oninput="upd('czesci',${r.id},'nazwa',this.value)"></td>
+      <td class="num"><input type="number" min="0" step="1" value="${r.ilosc}" oninput="upd('czesci',${r.id},'ilosc',this.value,true)"></td>
+      <td class="num"><input type="number" min="0" step="0.01" value="${r.cenaNetto}" oninput="upd('czesci',${r.id},'cenaNetto',this.value,true)"></td>
+      <td><select onchange="upd('czesci',${r.id},'rodzaj',this.value)">${opt(['O','Q','P','Z'],r.rodzaj)}</select></td>
+      <td class="num"><input type="number" min="0" step="1" value="${r.rabat}" oninput="upd('czesci',${r.id},'rabat',this.value,true)"></td>
+      <td class="num"><input type="number" min="0" step="1" value="${r.potracenie}" oninput="upd('czesci',${r.id},'potracenie',this.value,true)"></td>
+      <td class="val" id="vc-${r.id}">${zl(valCzesc(r))}</td>
+      <td class="no-print"><button class="rowdel" onclick="del('czesci',${r.id})">×</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+function renderRobocizna(){
+  const tb=$('tb-robocizna'); tb.innerHTML='';
+  K.robocizna.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td class="lp">${i+1}</td>
+      <td><input value="${esc(r.opis)}" oninput="upd('robocizna',${r.id},'opis',this.value)"></td>
+      <td><select onchange="upd('robocizna',${r.id},'kategoria',this.value)">${opt(['BL','MECH','EL','DEM-MONT'],r.kategoria)}</select></td>
+      <td><select onchange="upd('robocizna',${r.id},'rodzaj',this.value)">${opt(['W','N','Wym/Zam'],r.rodzaj)}</select></td>
+      <td class="num"><input type="number" min="0" step="0.1" value="${r.czasRbg}" oninput="upd('robocizna',${r.id},'czasRbg',this.value,true)"></td>
+      <td class="val" id="rs-${r.id}">${fmtPl(stawkaFor(r.kategoria))}</td>
+      <td class="val" id="rv-${r.id}">${zl(valRobocizna(r))}</td>
+      <td class="no-print"><button class="rowdel" onclick="del('robocizna',${r.id})">×</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+function renderLakier(){
+  const tb=$('tb-lakier'); tb.innerHTML='';
+  K.lakier.forEach((r,i)=>{
+    const v=valLakier(r);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td class="lp">${i+1}</td>
+      <td><input value="${esc(r.element)}" oninput="upd('lakier',${r.id},'element',this.value)"></td>
+      <td class="num"><input type="number" min="0" step="0.1" value="${r.m2}" oninput="upd('lakier',${r.id},'m2',this.value,true)"></td>
+      <td class="num"><input type="number" min="0" step="0.1" value="${r.czasRbg}" oninput="upd('lakier',${r.id},'czasRbg',this.value,true)"></td>
+      <td class="val" id="lr-${r.id}">${zl(v.robocizna)}</td>
+      <td class="num"><input type="number" min="0" step="0.01" value="${r.matKwota}" placeholder="auto" oninput="upd('lakier',${r.id},'matKwota',this.value,true)"></td>
+      <td class="val" id="lt-${r.id}">${zl(v.total)}</td>
+      <td class="no-print"><button class="rowdel" onclick="del('lakier',${r.id})">×</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+function renderMatDod(){
+  const tb=$('tb-matdod'); tb.innerHTML='';
+  K.matdod.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td class="lp">${i+1}</td>
+      <td><input value="${esc(r.opis)}" oninput="upd('matdod',${r.id},'opis',this.value)"></td>
+      <td class="num" id="mk-${r.id}"><input type="number" min="0" step="0.01" value="${r.kwota}" oninput="upd('matdod',${r.id},'kwota',this.value,true)"></td>
+      <td class="no-print"><button class="rowdel" onclick="del('matdod',${r.id})">×</button></td>`;
+    tb.appendChild(tr);
+  });
+}
+function esc(s){ return String(s??'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function opt(arr,sel){ return arr.map(v=>`<option ${v===sel?'selected':''}>${v}</option>`).join(''); }
+
+/* ================= Wyliczenia ================= */
+function valCzesc(r){ return round2(num(r.cenaNetto)*num(r.ilosc)*(1-num(r.rabat)/100)*(1-num(r.potracenie)/100)); }
+function valRobocizna(r){ return round2(num(r.czasRbg)*stawkaFor(r.kategoria)); }
+function valLakier(r){
+  const robocizna=round2(num(r.czasRbg)*K.stawki.lak);
+  const mat = num(r.matKwota)>0 ? round2(num(r.matKwota)) : round2(robocizna*num(K.stawki.matlak)/100);
+  return { robocizna, mat, total:round2(robocizna+mat) };
+}
+
+// recalc() = pełna przebudowa wierszy + przeliczenie. Używać przy dodaj/usuń/wczytaj.
+function recalc(){ renderCzesci(); renderRobocizna(); renderLakier(); renderMatDod(); return refreshTotals(); }
+
+// refreshTotals() = tylko przeliczenie sum + aktualizacja komórek wartości po id.
+// NIE odtwarza inputów → edytowany input nie traci focusu. Używać przy każdym oninput.
+function refreshTotals(){
+  readStawkiFromDom();
+  K.czesci.forEach(r=>{ const v=valCzesc(r); const c=$('vc-'+r.id); if(c){ c.textContent=zl(v); markZero(c,v===0); } });
+  K.robocizna.forEach(r=>{ const s=$('rs-'+r.id); if(s) s.textContent=fmtPl(stawkaFor(r.kategoria)); const val=valRobocizna(r); const v=$('rv-'+r.id); if(v){ v.textContent=zl(val); markZero(v,val===0); } });
+  K.lakier.forEach(r=>{ const vv=valLakier(r); const a=$('lr-'+r.id); if(a) a.textContent=zl(vv.robocizna); const b=$('lt-'+r.id); if(b){ b.textContent=zl(vv.total); markZero(b,vv.total===0); } });
+  K.matdod.forEach(r=>{ markZero($('mk-'+r.id), num(r.kwota)===0); });
+
+  const sumCz = round2(K.czesci.reduce((s,r)=>s+valCzesc(r),0));
+  const sumRob = round2(K.robocizna.reduce((s,r)=>s+valRobocizna(r),0));
+  let lakRob=0, lakMat=0;
+  K.lakier.forEach(r=>{ const v=valLakier(r); lakRob+=v.robocizna; lakMat+=v.mat; });
+  lakRob=round2(lakRob); lakMat=round2(lakMat);
+  const sumLak=round2(lakRob+lakMat);
+  const matPom=round2((sumRob+lakRob)*num(K.stawki.matpom)/100);
+  const sumMatDod=round2(K.matdod.reduce((s,r)=>s+num(r.kwota),0));
+
+  const razemNetto=round2(sumCz+sumRob+sumLak+matPom+sumMatDod);
+  const vatKw=round2(razemNetto*num(K.stawki.vat)/100);
+  const razemBrutto=round2(razemNetto+vatKw);
+
+  const baza = K.podstawa==='netto' ? razemNetto : razemBrutto;
+  const ubytek=round2(num(K.stawki.ubytek)), udzial=round2(num(K.stawki.udzial));
+  const koncowa=round2(baza + ubytek - udzial);
+
+  $('st-czesci').textContent=zl(sumCz);
+  $('st-robocizna').textContent=zl(sumRob);
+  $('st-lakier').textContent=zl(sumLak);
+  $('st-matdod').textContent=zl(sumMatDod);
+
+  $('sumbox').innerHTML=`
+    <div class="sumrow"><span class="lbl">Części (po rabatach/potrąceniach)</span><span class="amt">${zl(sumCz)}</span></div>
+    <div class="sumrow"><span class="lbl">Robocizna naprawcza</span><span class="amt">${zl(sumRob)}</span></div>
+    <div class="sumrow"><span class="lbl">Lakierowanie — robocizna</span><span class="amt">${zl(lakRob)}</span></div>
+    <div class="sumrow"><span class="lbl">Lakierowanie — materiał</span><span class="amt">${zl(lakMat)}</span></div>
+    <div class="sumrow"><span class="lbl">Materiały pomocnicze (${fmtPl(K.stawki.matpom)}%)</span><span class="amt">${zl(matPom)}</span></div>
+    <div class="sumrow"><span class="lbl">Materiały dodatkowe i normalia</span><span class="amt">${zl(sumMatDod)}</span></div>
+    <div class="sumrow net"><span class="lbl">Razem netto</span><span class="amt">${zl(razemNetto)}</span></div>
+    <div class="sumrow"><span class="lbl">VAT (${fmtPl(K.stawki.vat)}%)</span><span class="amt">${zl(vatKw)}</span></div>
+    <div class="sumrow gross"><span class="lbl">Razem brutto</span><span class="amt">${zl(razemBrutto)}</span></div>
+    <div class="basis no-print">
+      <label>Podstawa kwoty końcowej:</label>
+      <select id="sel-podstawa" onchange="K.podstawa=this.value;recalc();persist()">
+        ${opt2(['brutto','netto'],K.podstawa)}
+      </select>
+    </div>
+    <div class="sumrow corr add"><span class="lbl">+ Merkantylny ubytek wartości</span><span class="amt">${zl(ubytek)}</span></div>
+    <div class="sumrow corr"><span class="lbl">− Udział własny</span><span class="amt">−${zl(udzial)}</span></div>
+    <div class="sumrow final"><span class="lbl">Kwota końcowa (${K.podstawa})</span><span class="amt">${zl(koncowa)}</span></div>`;
+  return { sumCz,sumRob,lakRob,lakMat,sumLak,matPom,sumMatDod,razemNetto,vatKw,razemBrutto,ubytek,udzial,koncowa };
+}
+function opt2(arr,sel){ return arr.map(v=>`<option value="${v}" ${v===sel?'selected':''}>${v.charAt(0).toUpperCase()+v.slice(1)}</option>`).join(''); }
+
+/* ================= CRUD wierszy ================= */
+function upd(tab,id,field,val,isNum){
+  const r=K[tab].find(x=>x.id===id); if(!r) return;
+  r[field]=isNum? num(val) : val;
+  refreshTotals(); persist();   // bez przebudowy wierszy → input zachowuje focus
+}
+function onStawki(){ refreshTotals(); persist(); }
+function del(tab,id){ K[tab]=K[tab].filter(x=>x.id!==id); recalc(); persist(); }
+
+function addCzesc(p){
+  K.czesci.push({ id:uid(), nrKat:p?.nrKat||'', nazwa:p?.nazwa||'', ilosc:1,
+    cenaNetto:p?.cenaNetto??0, rodzaj:p?.rodzaj||'O', rabat:num(K.stawki.rabat), potracenie:num(K.stawki.amort) });
+  recalc(); persist();
+}
+function addRobocizna(){ K.robocizna.push({ id:uid(), opis:'', kategoria:'BL', rodzaj:'W', czasRbg:0 }); recalc(); persist(); }
+function addLakier(){ K.lakier.push({ id:uid(), element:'', m2:0, czasRbg:0, matKwota:0 }); recalc(); persist(); }
+function addMatDod(){ K.matdod.push({ id:uid(), opis:'', kwota:0 }); recalc(); persist(); }
+
+/* ================= Modal: pełna pozycja ================= */
+function openEntry(){
+  $('e-nazwa').value=''; $('e-nrkat').value=''; $('e-cena').value=''; $('e-ilosc').value='1';
+  $('e-rodzaj').value='O'; $('e-robn').value=''; $('e-katn').value='BL'; $('e-rodzn').value='W'; $('e-robl').value='';
+  $('entry-msg').className='msg';
+  $('ov-entry').classList.add('on'); setTimeout(()=>$('e-nazwa').focus(),50);
+}
+function submitEntry(){
+  const nazwa=$('e-nazwa').value.trim(), nrKat=$('e-nrkat').value.trim();
+  const cenaRaw=$('e-cena').value.trim(), cena=num(cenaRaw), ilosc=num($('e-ilosc').value)||1;
+  const rodzaj=$('e-rodzaj').value, robN=num($('e-robn').value), katN=$('e-katn').value, rodzN=$('e-rodzn').value, robL=num($('e-robl').value);
+  let added=0;
+  if(cenaRaw!=='' || nrKat){
+    K.czesci.push({ id:uid(), nrKat, nazwa, ilosc, cenaNetto:cena, rodzaj, rabat:num(K.stawki.rabat), potracenie:num(K.stawki.amort) }); added++;
+  }
+  if(robN>0){ K.robocizna.push({ id:uid(), opis:nazwa, kategoria:katN, rodzaj:rodzN, czasRbg:robN }); added++; }
+  if(robL>0){ K.lakier.push({ id:uid(), element:nazwa, m2:0, czasRbg:robL, matKwota:0 }); added++; }
+  if(!added){ const m=$('entry-msg'); m.textContent='Wypełnij cenę/nr katalogowy, czas naprawczy lub czas lakierniczy.'; m.className='msg show error'; return; }
+  recalc(); persist(); closeOverlay('ov-entry');
+  toast(`Dodano pozycje: ${added}`,'ok');
+}
+
+/* ================= DOM <-> stan (meta/obiekt/stawki) ================= */
+function readMetaFromDom(){
+  K.meta={ nr:$('m-nr').value, data:$('m-data').value, sporz:$('m-sporz').value, zlec:$('m-zlec').value,
+    ubez:$('m-ubez').value, szkoda:$('m-szkoda').value, polisa:$('m-polisa').value };
+  K.obiekt={ typ:$('o-typ').value, marka:$('o-marka').value, model:$('o-model').value, vin:$('o-vin').value,
+    rej:$('o-rej').value, rok:$('o-rok').value, przebieg:$('o-przebieg').value, data1:$('o-data1').value };
+  K.uwagi=$('m-uwagi').value; K.podpis1=$('m-podpis1').value; K.podpis2=$('m-podpis2').value;
+}
+function readStawkiFromDom(){
+  K.stawki={ bl:num($('s-bl').value), mech:num($('s-mech').value), lak:num($('s-lak').value),
+    matlak:num($('s-matlak').value), matpom:num($('s-matpom').value), rabat:num($('s-rabat').value),
+    amort:num($('s-amort').value), vat:num($('s-vat').value), ubytek:num($('s-ubytek').value), udzial:num($('s-udzial').value) };
+}
+function writeDomFromState(){
+  const m=K.meta,o=K.obiekt,s=K.stawki;
+  $('m-nr').value=m.nr; $('m-data').value=m.data; $('m-sporz').value=m.sporz; $('m-zlec').value=m.zlec;
+  $('m-ubez').value=m.ubez; $('m-szkoda').value=m.szkoda; $('m-polisa').value=m.polisa;
+  $('o-typ').value=o.typ; $('o-marka').value=o.marka; $('o-model').value=o.model; $('o-vin').value=o.vin;
+  $('o-rej').value=o.rej; $('o-rok').value=o.rok; $('o-przebieg').value=o.przebieg; $('o-data1').value=o.data1;
+  $('s-bl').value=s.bl; $('s-mech').value=s.mech; $('s-lak').value=s.lak; $('s-matlak').value=s.matlak;
+  $('s-matpom').value=s.matpom; $('s-rabat').value=s.rabat; $('s-amort').value=s.amort; $('s-vat').value=s.vat;
+  $('s-ubytek').value=s.ubytek; $('s-udzial').value=s.udzial;
+  $('m-uwagi').value=K.uwagi||''; $('m-podpis1').value=K.podpis1||''; $('m-podpis2').value=K.podpis2||'';
+}
+
+/* ================= Persystencja localStorage ================= */
+function persist(){ try{ localStorage.setItem(LS_KEY, JSON.stringify({K,idc})); }catch(e){} }
+function loadPersist(){
+  try{
+    const raw=localStorage.getItem(LS_KEY); if(!raw) return;
+    const o=JSON.parse(raw);
+    if(o&&o.K){ K=Object.assign(blankState(),o.K);
+      K.stawki=Object.assign(blankState().stawki,o.K.stawki||{});
+      idc=o.idc||1; }
+  }catch(e){}
+}
+
+/* ================= JSON eksport/import ================= */
+function saveJson(){
+  readMetaFromDom(); readStawkiFromDom();
+  const blob=new Blob([JSON.stringify(K,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`kosztorys_${(K.meta.nr||'bez-numeru').replace(/[^\w-]/g,'_')}_${K.meta.data||''}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('Zapisano JSON','ok');
+}
+function importJsonPick(){ $('json-file').click(); }
+function importJsonFile(ev){
+  const f=ev.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const o=JSON.parse(rd.result);
+      K=Object.assign(blankState(),o);
+      K.stawki=Object.assign(blankState().stawki,o.stawki||{});
+      idc=Math.max(1,...['czesci','robocizna','lakier','matdod'].flatMap(t=>(K[t]||[]).map(r=>r.id||0)))+1;
+      writeDomFromState(); recalc(); persist();
+      toast('Wczytano kosztorys','ok');
+    }catch(e){ toast('Błędny plik JSON','error'); }
+  };
+  rd.readAsText(f); ev.target.value='';
+}
+
+/* ================= XLSX eksport ================= */
+function exportXlsx(){
+  readMetaFromDom(); const t=recalc();
+  const rows=[];
+  rows.push(['KOSZTORYS NAPRAWY']);
+  rows.push(['Nr',K.meta.nr,'Data',K.meta.data]);
+  rows.push(['Sporządzający',K.meta.sporz,'Zleceniodawca',K.meta.zlec]);
+  rows.push(['Ubezpieczyciel',K.meta.ubez,'Nr szkody',K.meta.szkoda,'Nr polisy',K.meta.polisa]);
+  rows.push(['Obiekt',`${K.obiekt.typ} ${K.obiekt.marka} ${K.obiekt.model}`,'VIN',K.obiekt.vin,'Nr rej',K.obiekt.rej]);
+  rows.push([]);
+  rows.push(['CZĘŚCI']);
+  rows.push(['Lp','Nr katalogowy','Nazwa','Ilość','Cena netto','Rodzaj','Rabat %','Potrąc. %','Wartość netto']);
+  K.czesci.forEach((r,i)=>rows.push([i+1,r.nrKat,r.nazwa,num(r.ilosc),num(r.cenaNetto),r.rodzaj,num(r.rabat),num(r.potracenie),valCzesc(r)]));
+  rows.push(['','','','','','','','Razem',t.sumCz]);
+  rows.push([]);
+  rows.push(['ROBOCIZNA NAPRAWCZA']);
+  rows.push(['Lp','Opis','Kategoria','Rodzaj','Czas (rbg)','Stawka','Wartość']);
+  K.robocizna.forEach((r,i)=>rows.push([i+1,r.opis,r.kategoria,r.rodzaj,num(r.czasRbg),stawkaFor(r.kategoria),valRobocizna(r)]));
+  rows.push(['','','','','','Razem',t.sumRob]);
+  rows.push([]);
+  rows.push(['LAKIEROWANIE']);
+  rows.push(['Lp','Element','Pow. m²','Czas (rbg)','Robocizna','Materiał','Wartość']);
+  K.lakier.forEach((r,i)=>{ const v=valLakier(r); rows.push([i+1,r.element,num(r.m2),num(r.czasRbg),v.robocizna,v.mat,v.total]); });
+  rows.push(['','','','','','Razem',t.sumLak]);
+  rows.push([]);
+  rows.push(['MATERIAŁY DODATKOWE I NORMALIA']);
+  rows.push(['Lp','Opis','Kwota netto']);
+  K.matdod.forEach((r,i)=>rows.push([i+1,r.opis,num(r.kwota)]));
+  rows.push([]);
+  rows.push(['PODSUMOWANIE']);
+  rows.push(['Części netto',t.sumCz]);
+  rows.push(['Robocizna naprawcza',t.sumRob]);
+  rows.push(['Lakierowanie (robocizna+materiał)',t.sumLak]);
+  rows.push([`Materiały pomocnicze (${K.stawki.matpom}%)`,t.matPom]);
+  rows.push(['Materiały dodatkowe i normalia',t.sumMatDod]);
+  rows.push(['RAZEM NETTO',t.razemNetto]);
+  rows.push([`VAT (${K.stawki.vat}%)`,t.vatKw]);
+  rows.push(['RAZEM BRUTTO',t.razemBrutto]);
+  rows.push(['+ Merkantylny ubytek',t.ubytek]);
+  rows.push(['− Udział własny',-t.udzial]);
+  rows.push([`KWOTA KOŃCOWA (${K.podstawa})`,t.koncowa]);
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:6},{wch:22},{wch:34},{wch:10},{wch:12},{wch:9},{wch:9},{wch:10},{wch:13}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Kosztorys');
+  XLSX.writeFile(wb,`kosztorys_${(K.meta.nr||'bez-numeru').replace(/[^\w-]/g,'_')}.xlsx`);
+  toast('Wyeksportowano XLSX','ok');
+}
+
+/* ================= Reset ================= */
+function resetAll(){
+  if(!confirm('Rozpocząć nowy kosztorys? Bieżące dane zostaną wyczyszczone.')) return;
+  K=blankState(); idc=1; writeDomFromState(); recalc(); persist();
+  toast('Nowy kosztorys');
+}
+
+/* ================= Supabase: login OTP ================= */
+function openLogin(){ if(_connected){ openPicker(); return; } $('ov-login').classList.add('on'); $('login-email').focus(); }
+function closeOverlay(id){ $(id).classList.remove('on'); }
+function loginStep(n){ $('login-step1').style.display=n===1?'':'none'; $('login-step2').style.display=n===2?'':'none'; }
+function loginMsg(msg,type){ const el=$('login-msg'); el.textContent=msg; el.className='msg show '+type; }
+
+async function sendOtpCode(){
+  const email=$('login-email').value.trim();
+  if(!/^[^@]+@[^@]+\.[^@]+$/.test(email)){ loginMsg('Podaj poprawny adres e-mail','error'); return; }
+  const btn=$('login-btn'); btn.disabled=true; btn.textContent='Wysyłanie…';
+  const { error }=await sb.auth.signInWithOtp({ email });
+  if(error){ loginMsg('Błąd: '+error.message,'error'); btn.disabled=false; btn.textContent='Wyślij kod'; }
+  else{ _otpEmail=email; $('login-otp-hint').textContent=`Kod wysłany na ${email} — sprawdź skrzynkę.`; loginMsg('',''); loginStep(2); $('login-code').focus(); btn.disabled=false; btn.textContent='Wyślij kod'; }
+}
+async function verifyOtpCode(){
+  const code=$('login-code').value.trim();
+  if(!/^\d{8}$/.test(code)){ loginMsg('Wpisz 8-cyfrowy kod z e-maila','error'); return; }
+  const btn=$('login-verify-btn'); btn.disabled=true; btn.textContent='Weryfikowanie…';
+  const { error }=await sb.auth.verifyOtp({ email:_otpEmail, token:code, type:'email' });
+  if(error){ loginMsg('Nieprawidłowy lub wygasły kod','error'); btn.disabled=false; btn.textContent='Weryfikuj i połącz'; return; }
+  // sukces
+  btn.disabled=false; btn.textContent='Weryfikuj i połącz';
+  closeOverlay('ov-login');
+  await onConnected();
+}
+async function onConnected(){
+  _connected=true;
+  $('conn').classList.add('on'); $('conn-txt').textContent='Połączono z katalogiem';
+  $('btn-connect').textContent='📥 Dodaj z katalogu';
+  await loadCatalog();
+  openPicker();
+}
+async function loadCatalog(){
+  toast('Wczytywanie części…');
+  const PAGE=1000; let from=0, all=[];
+  while(true){
+    const { data, error }=await sb.from('parts').select('id,category,name,price_net,price_gross,photo,description').order('name').range(from,from+PAGE-1);
+    if(error){ toast('Błąd pobierania części: '+error.message,'error',5000); break; }
+    all.push(...data); if(data.length<PAGE) break; from+=PAGE;
+  }
+  catalogParts=all.map(r=>({ id:r.id, category:r.category, name:r.name,
+    priceNet:r.price_net!=null?+r.price_net:(r.price_gross!=null?round2(r.price_gross/(1+K.stawki.vat/100)):0),
+    photo:r.photo||null, desc:r.description||'' }));
+  toast(`Wczytano ${catalogParts.length} części`,'ok');
+}
+
+/* ================= Picker części ================= */
+function catalogCats(){
+  const set=new Set();
+  catalogParts.forEach(p=>{ if(p.category){ set.add(p.category); set.add(p.category.split('/')[0]); } });
+  return [...set].sort((a,b)=>a.localeCompare(b,'pl'));
+}
+function fillPickerCats(){
+  const sel=$('picker-cat'); if(!sel) return;
+  sel.innerHTML='<option value="">Wszystkie kategorie</option>'+catalogCats().map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+}
+function openPicker(){
+  if(!_connected){ openLogin(); return; }
+  $('ov-picker').classList.add('on');
+  fillPickerCats(); $('picker-cat').value=''; $('picker-search').value='';
+  renderPicker(); $('picker-search').focus();
+}
+function renderPicker(){
+  const words=$('picker-search').value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const cat=$('picker-cat') ? $('picker-cat').value : '';
+  // filtr kategorii (AND): dokładna kategoria lub jej podkategorie "Kat/..."
+  let base=catalogParts.filter(p=>!cat || p.category===cat || (p.category||'').startsWith(cat+'/'));
+  let list;
+  if(words.length){
+    // każde słowo osobno (OR/unia); ranking: więcej trafionych słów = wyżej
+    list=base.map(p=>{ const hay=(p.name+' '+(p.category||'')).toLowerCase();
+        return { p, score:words.reduce((s,w)=>s+(hay.includes(w)?1:0),0) }; })
+      .filter(x=>x.score>0)
+      .sort((a,b)=> b.score-a.score || a.p.name.localeCompare(b.p.name,'pl'))
+      .map(x=>x.p);
+  } else { list=base; }
+  list=list.slice(0,300);
+  $('picker-count').textContent=`${list.length} / ${catalogParts.length}`;
+  $('picker-list').innerHTML = list.length ? list.map(p=>`
+    <div class="pick" onclick="pickPart(${p.id})">
+      <img src="${p.photo||placeholder()}" onerror="this.src=placeholderImg()" alt="">
+      <div class="nfo"><div class="nm">${esc(p.name)}</div><div class="meta">${esc(p.category||'')}</div></div>
+      <div class="pr">${zl(p.priceNet)}</div>
+    </div>`).join('') : '<div style="padding:18px;text-align:center;color:var(--muted)">Brak wyników</div>';
+}
+function placeholder(){ return placeholderImg(); }
+function placeholderImg(){ return 'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="42" height="42"><rect width="42" height="42" fill="#e6e9ee"/><text x="21" y="26" font-size="10" text-anchor="middle" fill="#9aa">brak</text></svg>'); }
+function pickPart(id){
+  const p=catalogParts.find(x=>x.id===id); if(!p) return;
+  // część (nazwa + cena) → Części
+  K.czesci.push({ id:uid(), nrKat:'', nazwa:p.name, ilosc:1, cenaNetto:p.priceNet, rodzaj:'O',
+    rabat:num(K.stawki.rabat), potracenie:num(K.stawki.amort) });
+  // ta sama nazwa → Robocizna naprawcza, rodzaj W (wymiana), czas pusty do uzupełnienia
+  K.robocizna.push({ id:uid(), opis:p.name, kategoria:'BL', rodzaj:'W', czasRbg:'' });
+  recalc(); persist();
+  toast(`Dodano: ${p.name}`,'ok',1500);
+}
+
+/* ================= Init ================= */
+async function init(){
+  applyTheme(localStorage.getItem(THEME_KEY)||'night');
+  loadPersist();
+  writeDomFromState();
+  recalc();
+  if(K.czesci.length===0 && K.robocizna.length===0 && K.lakier.length===0) addCzesc();
+  // jeśli istnieje sesja Supabase — od razu połącz (cichą)
+  try{
+    const { data:{ session } }=await sb.auth.getSession();
+    if(session){ await onConnected(); closeOverlay('ov-picker'); }
+  }catch(e){}
+}
+init();
+</script>
+</body>
+</html>
