@@ -1,0 +1,10 @@
+# Serwer statyczny dla kosztorysu — Railway podstawia $PORT, lokalnie leci na :80
+:{$PORT:80} {
+	root * /srv
+	file_server
+	encode gzip zstd
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
