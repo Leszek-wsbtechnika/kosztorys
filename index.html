@@ -135,9 +135,14 @@ input:focus,select:focus,textarea:focus,.fld input:focus,.fld select:focus,.fld 
 input::placeholder,textarea::placeholder{color:var(--muted);font-family:var(--mono);font-size:.8rem}
 textarea{resize:vertical;min-height:72px}
 option{background:var(--surface2);color:var(--text)}
-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b5a3e'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
-[data-theme="dark"] select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23a08060'/%3E%3C/svg%3E")}
+/* strzałka selecta — selektory muszą mieć tę samą specyficzność co reguła pól wyżej (`.fld select`),
+   inaczej skrót `background:` z tamtej reguły kasuje background-repeat i strzałka kafelkuje się */
+select,.fld select,td select{appearance:none;background-repeat:no-repeat;background-position:right 10px center;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236b5a3e'/%3E%3C/svg%3E")}
+select,.fld select{padding-right:28px}
+td select{background-position:right 4px center;padding-right:18px}
+[data-theme="dark"] select,[data-theme="dark"] .fld select,[data-theme="dark"] td select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23a08060'/%3E%3C/svg%3E")}
 .stawki .fld input{text-align:right;font-family:var(--display);font-size:.85rem}
 
 /* ===== Tabele ===== */
@@ -149,15 +154,18 @@ thead th{background:var(--surface2);padding:9px 10px;text-align:left;font-family
 tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
 tbody tr:hover{background:var(--primary-dim)}
 tbody td{padding:4px 6px;vertical-align:middle}
-td input,td select{width:100%;border:1px solid transparent;background:transparent;padding:6px;border-radius:0;
-  color:var(--text);font-size:.82rem;font-family:var(--sans)}
+/* selektory typu (input[type=number]) mają wyższą specyficzność niż `td input` — stąd jawna lista */
+td input,td select,td input[type=text],td input[type=number],td input[type=date]{width:100%;border:1px solid transparent;
+  background-color:transparent;padding:6px;border-radius:0;color:var(--text);font-size:.82rem;font-family:var(--sans)}
 td input:hover,td select:hover{border-color:var(--border)}
-td input:focus,td select:focus{border-color:var(--primary);background:var(--surface2)}
+td input:focus,td select:focus,td input[type=number]:focus,td input[type=text]:focus{border-color:var(--primary);
+  background-color:var(--surface2)}
 td.num input{text-align:right;font-family:var(--mono)}
 td.val{text-align:right;font-family:var(--display);font-weight:700;font-size:.8rem;color:var(--primary);white-space:nowrap}
 td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono);font-size:.72rem}
 .auto-mat{font-family:var(--mono);font-size:.62rem;color:var(--primary);text-align:right;margin-top:2px;white-space:nowrap}
-.rowdel{background:none;border:none;color:var(--muted-lt);font-size:1rem;line-height:1;padding:2px 6px;transition:color .15s}
+.rowdel{background:none;border:none;color:var(--muted-lt);font-family:var(--mono);font-size:1rem;line-height:1;
+  padding:2px 6px;transition:color .15s}
 .rowdel:hover{color:var(--danger)}
 .tfoot-add{padding:12px 10px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--border)}
 .addbtn{background:transparent;color:var(--text-dim);border:1px dashed var(--border-bright);padding:7px 14px;
