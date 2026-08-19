@@ -122,6 +122,7 @@ td input:focus,td select:focus{border-color:var(--accent);background:var(--bg);b
 td.num input{text-align:right}
 td.val{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap;color:var(--text)}
 td.lp{text-align:center;color:var(--muted);width:34px;font-family:var(--font-mono)}
+.auto-mat{font-family:var(--font-mono);font-size:10px;color:var(--accent2);text-align:right;margin-top:2px;white-space:nowrap}
 .rowdel{background:none;border:none;color:var(--red);font-size:16px;line-height:1;padding:2px 6px}
 .rowdel:hover{color:#ff6b6b}
 .tfoot-add{padding:12px 10px;display:flex;gap:8px;flex-wrap:wrap}
@@ -388,7 +389,7 @@ td.lp{text-align:center;color:var(--muted);width:34px;font-family:var(--font-mon
         </table>
       </div>
       <div class="tfoot-add"><button class="addbtn" onclick="addLakier()">＋ Dodaj element</button></div>
-      <div class="subtotal">Razem lakierowanie (robocizna + materiał): <span id="st-lakier">0,00 zł</span></div>
+      <div class="subtotal">Razem lakierowanie (robocizna + materiał <span id="lak-wsk">40%</span> z robocizny lakierniczej): <span id="st-lakier">0,00 zł</span></div>
     </div>
   </div>
 
@@ -594,7 +595,7 @@ function renderLakier(){
       <td class="num"><input type="number" min="0" step="0.1" value="${r.m2}" oninput="upd('lakier',${r.id},'m2',this.value,true)"></td>
       <td class="num"><input type="number" min="0" step="0.1" value="${r.czasRbg}" oninput="upd('lakier',${r.id},'czasRbg',this.value,true)"></td>
       <td class="val" id="lr-${r.id}">${zl(v.robocizna)}</td>
-      <td class="num"><input type="number" min="0" step="0.01" value="${r.matKwota}" placeholder="auto" oninput="upd('lakier',${r.id},'matKwota',this.value,true)"></td>
+      <td class="num"><input type="number" min="0" step="0.01" value="${r.matKwota}" placeholder="auto" oninput="upd('lakier',${r.id},'matKwota',this.value,true)"><div class="auto-mat" id="lm-${r.id}"></div></td>
       <td class="val" id="lt-${r.id}">${zl(v.total)}</td>
       <td class="no-print"><button class="rowdel" onclick="del('lakier',${r.id})">×</button></td>`;
     tb.appendChild(tr);
@@ -631,10 +632,17 @@ function recalc(){ renderCzesci(); renderRobocizna(); renderLakier(); renderMatD
 // NIE odtwarza inputów → edytowany input nie traci focusu. Używać przy każdym oninput.
 function refreshTotals(){
   readStawkiFromDom();
+  const wsk = +K.stawki.matlak||0;   // współczynnik materiału lakierniczego (%)
   K.czesci.forEach(r=>{ const v=valCzesc(r); const c=$('vc-'+r.id); if(c){ c.textContent=zl(v); markZero(c,v===0); } });
   K.robocizna.forEach(r=>{ const s=$('rs-'+r.id); if(s) s.textContent=fmtPl(stawkaFor(r.kategoria)); const val=valRobocizna(r); const v=$('rv-'+r.id); if(v){ v.textContent=zl(val); markZero(v,val===0); } });
-  K.lakier.forEach(r=>{ const vv=valLakier(r); const a=$('lr-'+r.id); if(a) a.textContent=zl(vv.robocizna); const b=$('lt-'+r.id); if(b){ b.textContent=zl(vv.total); markZero(b,vv.total===0); } });
+  K.lakier.forEach(r=>{ const vv=valLakier(r);
+    const a=$('lr-'+r.id); if(a) a.textContent=zl(vv.robocizna);
+    const b=$('lt-'+r.id); if(b){ b.textContent=zl(vv.total); markZero(b,vv.total===0); }
+    // materiał auto (gdy nie wpisany ręcznie) → pokaż wartość z współczynnika pod polem
+    const m=$('lm-'+r.id); if(m) m.textContent = (num(r.matKwota)>0 || vv.robocizna<=0) ? '' : `↳ ${wsk}% = ${zl(vv.mat)}`;
+  });
   K.matdod.forEach(r=>{ markZero($('mk-'+r.id), num(r.kwota)===0); });
+  const lw=$('lak-wsk'); if(lw) lw.textContent=wsk+'%';
 
   const sumCz = round2(K.czesci.reduce((s,r)=>s+valCzesc(r),0));
   const sumRob = round2(K.robocizna.reduce((s,r)=>s+valRobocizna(r),0));
@@ -662,7 +670,7 @@ function refreshTotals(){
     <div class="sumrow"><span class="lbl">Części (po rabatach/potrąceniach)</span><span class="amt">${zl(sumCz)}</span></div>
     <div class="sumrow"><span class="lbl">Robocizna naprawcza</span><span class="amt">${zl(sumRob)}</span></div>
     <div class="sumrow"><span class="lbl">Lakierowanie — robocizna</span><span class="amt">${zl(lakRob)}</span></div>
-    <div class="sumrow"><span class="lbl">Lakierowanie — materiał</span><span class="amt">${zl(lakMat)}</span></div>
+    <div class="sumrow"><span class="lbl">Lakierowanie — materiał (${wsk}% z robocizny lakierniczej)</span><span class="amt">${zl(lakMat)}</span></div>
     <div class="sumrow"><span class="lbl">Materiały pomocnicze (${fmtPl(K.stawki.matpom)}%)</span><span class="amt">${zl(matPom)}</span></div>
     <div class="sumrow"><span class="lbl">Materiały dodatkowe i normalia</span><span class="amt">${zl(sumMatDod)}</span></div>
     <div class="sumrow net"><span class="lbl">Razem netto</span><span class="amt">${zl(razemNetto)}</span></div>
