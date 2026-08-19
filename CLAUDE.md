@@ -52,8 +52,7 @@ DOM↔stan: `readMetaFromDom`/`readStawkiFromDom` (DOM→K), `writeDomFromState`
 - część: `cenaNetto*ilosc*(1-rabat/100)*(1-potracenie/100)`
 - robocizna: `czasRbg * stawkaFor(kategoria)` — `BL`→stawka blacharska; `MECH`/`EL`/`DEM-MONT`→mechaniczna
 - lakier: `robocizna = czasRbg*stawka_lak`; `materiał = matKwota>0 ? matKwota : robocizna*matlak%` (wpisana kwota ma pierwszeństwo; 0 = auto ze wskaźnika; `matlak` domyślnie 40%)
-- materiały pomocnicze = `(robocizna + robocizna_lak) * matpom%` (auto w podsumowaniu)
-- normalia = `suma_części * normalia%` (auto w podsumowaniu; blok „Materiały dodatkowe" to osobne pozycje ręczne, **nie** normalia)
+- normalia = `suma_części * normalia%` (auto w podsumowaniu; blok „Materiały dodatkowe" to osobne pozycje ręczne, **nie** normalia) Dawna pozycja „materiały pomocnicze (% robocizny)" zniknęła — normalia ją zastępują, a `matpom` ze starych zapisów jest ignorowane.
 - podsumowanie: Σ → netto → VAT → brutto → korekty (`+ ubytek merkantylny`, `− udział własny`); `K.podstawa` ('netto'/'brutto') wybiera bazę kwoty końcowej
 - `round2()` na każdym kroku (jak w `katalog`/`czas`)
 

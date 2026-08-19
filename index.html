@@ -282,7 +282,7 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono)
 .printdoc .p-head{border-bottom:1.2pt solid #000;padding-bottom:2mm;margin-bottom:3.5mm;flex:0 0 auto}
 .printdoc .p-head-top{display:flex;justify-content:space-between;align-items:baseline;gap:6mm}
 .printdoc .p-title{font-size:12pt;font-weight:700;letter-spacing:.02em;text-transform:uppercase}
-.printdoc .p-pageno{font-size:7pt;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.printdoc .p-pageno{font-size:8pt;letter-spacing:.02em;white-space:nowrap}
 .printdoc .p-subhead{font-size:8pt;color:#222;margin-top:1.2mm}
 .printdoc .p-body{flex:1 1 auto}
 .printdoc .p-foot{flex:0 0 auto;margin-top:3mm;border-top:.5pt solid #000;padding-top:1.5mm;
@@ -422,7 +422,6 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono)
         <div class="fld"><label>Stawka rbg — mechaniczna (zł)</label><input type="number" id="s-mech" value="120" oninput="onStawki()"></div>
         <div class="fld"><label>Stawka rbg — lakiernicza (zł)</label><input type="number" id="s-lak" value="130" oninput="onStawki()"></div>
         <div class="fld"><label>Wskaźnik materiału lak. (% robocizny lak.)</label><input type="number" id="s-matlak" value="40" oninput="onStawki()"></div>
-        <div class="fld"><label>Materiały pomocnicze (% robocizny)</label><input type="number" id="s-matpom" value="2" oninput="onStawki()"></div>
         <div class="fld"><label>Normalia (% z części)</label><input type="number" id="s-normalia" value="2" oninput="onStawki()"></div>
         <div class="fld"><label>Rabat na części — domyślny (%)</label><input type="number" id="s-rabat" value="0" oninput="onStawki()"></div>
         <div class="fld"><label>Potrącenie amortyzacyjne — domyślne (%)</label><input type="number" id="s-amort" value="0" oninput="onStawki()"></div>
@@ -502,7 +501,7 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono)
   <!-- ===== Materiały dodatkowe (pozycje ręczne) ===== -->
   <div class="doc">
     <div class="doc-head"><h2>Materiały dodatkowe</h2>
-      <span class="badge no-print">materiały pomocnicze (% robocizny) i normalia (% z części) liczone automatycznie w podsumowaniu</span></div>
+      <span class="badge no-print">normalia (% z części) liczone automatycznie w podsumowaniu</span></div>
     <div class="doc-body" style="padding:0">
       <div class="tbl-scroll">
         <table>
@@ -635,7 +634,7 @@ function blankState(){
     // vinKrotki = użytkownik potwierdził, że numer jest krótszy niż 17 znaków (maszyna, nie pojazd drogowy)
     obiekt:{ typ:'Naczepa', marka:'', model:'', vin:'', vinKrotki:false, rej:'', rok:'', przebieg:'', data1:'' },
     warsztat:{ nazwa:'', adres:'' },
-    stawki:{ bl:120, mech:120, lak:130, matlak:40, matpom:2, normalia:2, rabat:0, amort:0, vat:23, ubytek:0, udzial:0 },
+    stawki:{ bl:120, mech:120, lak:130, matlak:40, normalia:2, rabat:0, amort:0, vat:23, ubytek:0, udzial:0 },
     czesci:[], robocizna:[], lakier:[], matdod:[],
     uwagi:'', podpis1:'', podpis2:'', podstawa:'brutto'
   };
@@ -808,12 +807,11 @@ function refreshTotals(){
   K.lakier.forEach(r=>{ const v=valLakier(r); lakRob+=v.robocizna; lakMat+=v.mat; });
   lakRob=round2(lakRob); lakMat=round2(lakMat);
   const sumLak=round2(lakRob+lakMat);
-  const matPom=round2((sumRob+lakRob)*num(K.stawki.matpom)/100);
   // normalia liczone automatycznie od wartości części — zero, gdy nie ma żadnych części
   const normalia=round2(sumCz*num(K.stawki.normalia)/100);
   const sumMatDod=round2(K.matdod.reduce((s,r)=>s+num(r.kwota),0));
 
-  const razemNetto=round2(sumCz+sumRob+sumLak+matPom+normalia+sumMatDod);
+  const razemNetto=round2(sumCz+sumRob+sumLak+normalia+sumMatDod);
   const vatKw=round2(razemNetto*num(K.stawki.vat)/100);
   const razemBrutto=round2(razemNetto+vatKw);
 
@@ -831,7 +829,6 @@ function refreshTotals(){
     <div class="sumrow"><span class="lbl">Robocizna naprawcza</span><span class="amt">${zl(sumRob)}</span></div>
     <div class="sumrow"><span class="lbl">Lakierowanie — robocizna</span><span class="amt">${zl(lakRob)}</span></div>
     <div class="sumrow"><span class="lbl">Lakierowanie — materiał (${wsk}% z robocizny lakierniczej)</span><span class="amt">${zl(lakMat)}</span></div>
-    <div class="sumrow"><span class="lbl">Materiały pomocnicze (${fmtPl(K.stawki.matpom)}%)</span><span class="amt">${zl(matPom)}</span></div>
     <div class="sumrow"><span class="lbl">Normalia (${fmtPl(K.stawki.normalia)}% z części)</span><span class="amt">${zl(normalia)}</span></div>
     <div class="sumrow"><span class="lbl">Materiały dodatkowe (pozycje ręczne)</span><span class="amt">${zl(sumMatDod)}</span></div>
     <div class="sumrow net"><span class="lbl">Razem netto</span><span class="amt">${zl(razemNetto)}</span></div>
@@ -846,7 +843,7 @@ function refreshTotals(){
     <div class="sumrow corr add"><span class="lbl">+ Merkantylny ubytek wartości</span><span class="amt">${zl(ubytek)}</span></div>
     <div class="sumrow corr"><span class="lbl">− Udział własny</span><span class="amt">−${zl(udzial)}</span></div>
     <div class="sumrow final"><span class="lbl">Kwota końcowa (${K.podstawa})</span><span class="amt">${zl(koncowa)}</span></div>`;
-  return { sumCz,sumRob,lakRob,lakMat,sumLak,matPom,normalia,sumMatDod,razemNetto,vatKw,razemBrutto,ubytek,udzial,koncowa };
+  return { sumCz,sumRob,lakRob,lakMat,sumLak,normalia,sumMatDod,razemNetto,vatKw,razemBrutto,ubytek,udzial,koncowa };
 }
 function opt2(arr,sel){ return arr.map(v=>`<option value="${v}" ${v===sel?'selected':''}>${v.charAt(0).toUpperCase()+v.slice(1)}</option>`).join(''); }
 
@@ -902,7 +899,7 @@ function readMetaFromDom(){
 }
 function readStawkiFromDom(){
   K.stawki={ bl:num($('s-bl').value), mech:num($('s-mech').value), lak:num($('s-lak').value),
-    matlak:num($('s-matlak').value), matpom:num($('s-matpom').value), normalia:num($('s-normalia').value),
+    matlak:num($('s-matlak').value), normalia:num($('s-normalia').value),
     rabat:num($('s-rabat').value),
     amort:num($('s-amort').value), vat:num($('s-vat').value), ubytek:num($('s-ubytek').value), udzial:num($('s-udzial').value) };
 }
@@ -916,7 +913,7 @@ function writeDomFromState(){
   $('o-typ').value=o.typ; $('o-marka').value=o.marka; $('o-model').value=o.model; $('o-vin').value=o.vin;
   $('o-rej').value=o.rej; $('o-rok').value=o.rok; $('o-przebieg').value=o.przebieg; $('o-data1').value=o.data1;
   $('s-bl').value=s.bl; $('s-mech').value=s.mech; $('s-lak').value=s.lak; $('s-matlak').value=s.matlak;
-  $('s-matpom').value=s.matpom; $('s-normalia').value=s.normalia; $('s-rabat').value=s.rabat;
+  $('s-normalia').value=s.normalia; $('s-rabat').value=s.rabat;
   $('s-amort').value=s.amort; $('s-vat').value=s.vat;
   $('s-ubytek').value=s.ubytek; $('s-udzial').value=s.udzial;
   $('m-uwagi').value=K.uwagi||''; $('m-podpis1').value=K.podpis1||''; $('m-podpis2').value=K.podpis2||'';
@@ -991,7 +988,7 @@ function printHead(n,total){
 }
 function printFoot(){
   return `<div class="p-foot">
-    <span>Kosztorys sporządzony w programie autorskim · L. Dąbrowski · normy czasowe i ceny wg danych własnych</span>
+    <span>Kosztorys sporządzony w programie: KosztorysSystem · normy czasowe i ceny wg danych własnych</span>
     <span>${pE(K.meta.nr||'')}</span>
   </div>`;
 }
@@ -1022,9 +1019,10 @@ function printBlocks(t){
 
   // stawki jako jedna linia — tylko niezerowe, żeby nie drukować rubryk z zerami
   const st=[];
-  const stAdd=(lbl,val,suf)=>{ if(num(val)) st.push(`${lbl} <b>${fmtPl(val)}${suf}</b>`); };
+  // w linii prozą „40,00%" wygląda sztucznie — procenty bez zbędnych zer, kwoty normalnie
+  const stAdd=(lbl,val,suf)=>{ if(num(val)) st.push(`${lbl} <b>${suf==='%'?+num(val):fmtPl(val)}${suf}</b>`); };
   stAdd('rbg blacharska',s.bl,' zł'); stAdd('rbg mechaniczna',s.mech,' zł'); stAdd('rbg lakiernicza',s.lak,' zł');
-  stAdd('materiał lakierniczy',s.matlak,'%'); stAdd('materiały pomocnicze',s.matpom,'%'); stAdd('normalia',s.normalia,'%');
+  stAdd('materiał lakierniczy',s.matlak,'%'); stAdd('normalia',s.normalia,'%');
   stAdd('rabat domyślny na części',s.rabat,'%'); stAdd('potrącenie amortyzacyjne',s.amort,'%');
   stAdd('VAT',s.vat,'%'); stAdd('merkantylny ubytek wartości',s.ubytek,' zł'); stAdd('udział własny',s.udzial,' zł');
   if(st.length) B.push({html:`<div class="p-sec"><h3>3 · Stawki i wskaźniki kalkulacji</h3><div class="p-strip">${st.join(' · ')}</div></div>`});
@@ -1072,7 +1070,6 @@ function printBlocks(t){
     row('Robocizna naprawcza',zl(t.sumRob)),
     row('Lakierowanie — robocizna',zl(t.lakRob)),
     row(`Lakierowanie — materiał (${fmtPl(K.stawki.matlak)}% robocizny lakierniczej)`,zl(t.lakMat)),
-    row(`Materiały pomocnicze (${fmtPl(K.stawki.matpom)}% robocizny)`,zl(t.matPom)),
     row(`Normalia (${fmtPl(K.stawki.normalia)}% wartości części)`,zl(t.normalia)),
     t.sumMatDod?row('Materiały dodatkowe',zl(t.sumMatDod)):'',
     row('Razem netto',zl(t.razemNetto),'rule'),
@@ -1184,7 +1181,6 @@ function exportXlsx(){
   rows.push(['Części netto',t.sumCz]);
   rows.push(['Robocizna naprawcza',t.sumRob]);
   rows.push(['Lakierowanie (robocizna+materiał)',t.sumLak]);
-  rows.push([`Materiały pomocnicze (${K.stawki.matpom}%)`,t.matPom]);
   rows.push([`Normalia (${K.stawki.normalia}% z części)`,t.normalia]);
   rows.push(['Materiały dodatkowe (pozycje ręczne)',t.sumMatDod]);
   rows.push(['RAZEM NETTO',t.razemNetto]);
