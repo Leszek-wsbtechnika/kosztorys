@@ -2,17 +2,22 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Run
+## Komendy
 
 ```bash
-open index.html   # bez serwera
+open index.html                    # uruchomienie — bez serwera, bez build-kroku
+node check-math.js                 # jedyny test: matematyka kosztorysu (headless, exit 1 = rozjazd)
+node check-math.js sciezka.html    # ten sam test na innym wariancie pliku
+git push miniu main                # deploy — Railway buduje i wdraża automatycznie
 ```
 
-**Deploy:** https://kosztorys.up.railway.app — Railway (konto `miniu1970@gmail.com`, projekt `determined-gratitude`, serwis `kosztorys`), auto-deploy z każdego pushu na `miniu/main`. Repo `MiniuPL/kosztorys` — remote `miniu` (`origin` = `Leszek-wsbtechnika/kosztorys`, repo źródłowe). **Oba remote'y żyją osobno — `miniu` jest gałęzią deployową i wolno mu wyprzedzać `origin`; nie synchronizuj ich bez wyraźnej prośby.** Kontener: `Dockerfile` (obraz `caddy:2-alpine`) + `Caddyfile` — serwuje **wyłącznie** `index.html` z `/srv`, nasłuch `:{$PORT:80}` (Railway wstrzykuje `PORT`). `.dockerignore` trzyma `CLAUDE.md`/`PLAN.md` poza obrazem. Uwaga przy przenoszeniu z `file://` na domenę Railway: `localStorage` jest origin-scoped, więc zapisane kosztorysy i sesja Supabase **nie migrują** — przenieś je eksportem/importem JSON.
+Nie ma bundlera, lintera ani frameworka testowego. `check-math.js` jest samowystarczalny (czysty `node`, zero zależności).
 
-CDN (wymaga internetu przy pierwszym ładowaniu): SheetJS `xlsx 0.18.5`, `@supabase/supabase-js 2.105.1` (oba z `integrity` hash), Google Fonts (Archivo / Hanken Grotesk / JetBrains Mono). Brak build/bundlera/testów. Cel: profesjonalny kosztorys naprawy pojazdów/maszyn (naczepy, przyczepy, ciągniki, maszyny) w układzie zbliżonym do Audatex/Audanet, do ubezpieczyciela. Pełne uzasadnienie struktury i badania w `PLAN.md`.
+**Deploy:** https://kosztorys.up.railway.app — Railway (konto `miniu1970@gmail.com`, projekt `determined-gratitude`, serwis `kosztorys`), auto-deploy z każdego pushu na `miniu/main`. Repo `MiniuPL/kosztorys` — remote `miniu` (`origin` = `Leszek-wsbtechnika/kosztorys`, repo źródłowe). **Oba remote'y żyją osobno — `miniu` jest gałęzią deployową i wolno mu wyprzedzać `origin`; nie synchronizuj ich bez wyraźnej prośby.** Kontener: `Dockerfile` (obraz `caddy:2-alpine`) + `Caddyfile` — serwuje **wyłącznie** `index.html` z `/srv`, nasłuch `:{$PORT:80}` (Railway wstrzykuje `PORT`). `.dockerignore` trzyma dokumentację i `check-math.js` poza obrazem. Uwaga przy przenoszeniu z `file://` na domenę Railway: `localStorage` jest origin-scoped, więc zapisane kosztorysy i sesja Supabase **nie migrują** — przenieś je eksportem/importem JSON.
 
-`index.html` (~1000 linii) — jeden plik CSS+HTML+JS. Frontend **spójny z `katalog`** (te same tokeny OKLCH i fonty Orbitron/Inter/Share Tech Mono) — patrz sekcja Design System. Komentarz autora po `<head>` jest wymagany (zasada z `../CLAUDE.md`).
+CDN (wymaga internetu przy pierwszym ładowaniu): SheetJS `xlsx 0.18.5`, `@supabase/supabase-js 2.105.1` (oba z `integrity` hash), Google Fonts (Orbitron / Inter / Share Tech Mono). Cel: profesjonalny kosztorys naprawy pojazdów/maszyn (naczepy, przyczepy, ciągniki, maszyny) w układzie zbliżonym do Audatex/Audanet, do ubezpieczyciela. Pełne uzasadnienie struktury i badania w `PLAN.md`.
+
+`index.html` (~1030 linii) — jeden plik CSS+HTML+JS; poza nim w repo są tylko `Dockerfile` + `Caddyfile` (deploy) i `check-math.js` (test). Frontend **spójny z `katalog`** (te same tokeny OKLCH i fonty Orbitron/Inter/Share Tech Mono) — patrz sekcja Design System. Komentarz autora po `<head>` jest wymagany (zasada z `../CLAUDE.md`).
 
 ## Integracja z katalogsystem.pl (projekt `katalog`)
 
@@ -60,11 +65,31 @@ Tokeny: `:root` (**jasny — domyślny, jak w katalogu**) + `[data-theme="dark"]
 
 Semantyka kolorów jest katalogowa, **odwrotna niż w Skybound**: `--primary` = pomarańcz (CTA, kwoty, focus), `--accent` = zieleń (potwierdzenia, kwota końcowa), `--danger` = czerwień, `--brand-orange` = akcent marki (lewa krawędź appbara, znacznik `.doc-head h2::before`). Fonty: Orbitron (`--display` — nagłówki, przyciski, **wszystkie kwoty**), Inter (`--sans` — body, inputy), Share Tech Mono (`--mono` — etykiety, `THEAD`, metadane), Georgia (`--serif` — wyłącznie wydruk). `border-radius:0` wszędzie, płaskie powierzchnie + `1px` obramowania.
 
-Appbar powtarza header katalogu: `--surface` + `border-left:3px solid var(--brand-orange)`, lockup `KOSZTORYS`+pomarańczowy `SYSTEM` w Orbitron, pod nim `.brand-sub` w mono. `.tbtn` = katalogowy `.btn` (Orbitron, uppercase, `letter-spacing:.08em`), warianty `.primary` (wypełniony pomarańcz) i `.ok` (zielony).
+Appbar powtarza header katalogu: `--surface` + `border-left:3px solid var(--brand-orange)`, lockup `KOSZTORYS`+pomarańczowy `SYSTEM` w Orbitron, pod nim `.brand-sub` w mono. `.tbtn` = katalogowy `.btn` (Orbitron, uppercase, `letter-spacing:.08em`), warianty `.primary` (wypełniony pomarańcz) i `.ok` (zielony). **Logo czeka na zaprojektowanie** — w `.brand` jest komentarz-zaczep, a reguła `.appbar .brand svg` i `gap` zostały na miejscu, więc nowe SVG wchodzi bez zmian w CSS.
 
-## Weryfikacja (bez przeglądarki)
+**Pułapka specyficzności — dwa razy już ugryzła.** Reguła pól obejmuje `.fld input,.fld select,.fld textarea` (0-1-1), więc:
+- `input[type=number]` (0-1-1, ale *później* w pliku) bije `td input` (0-0-2) — kolumny liczbowe w tabelach wymagają jawnego wypisania `td input[type=number]`, inaczej dostają tło i padding pola formularza.
+- skrót `background:` z tamtej reguły kasuje `background-repeat`/`background-position` strzałki `<select>` — reguły strzałki muszą mieć **tę samą** specyficzność (`select,.fld select,td select`), a tło w tabelach ustawiać przez `background-color`, nie skrót. Objaw: strzałka kafelkuje się na całym polu (widoczne tylko w jednym motywie).
 
-Krytyczna matematyka testowalna headless: wyciągnij inline `<script>` regexem, odpal w `node` `vm` ze stubem `document`/`supabase`/`localStorage`, ustaw wartości stawek w stubie DOM, wstrzyknij przykładowe `K.czesci/robocizna/lakier/matdod`, wywołaj `JSON.stringify(recalc())` i porównaj z ręcznie policzonym wynikiem. `recalc()` zwraca pełny obiekt sum — dlatego ten sam kod liczy ekran, XLSX i daje się testować. Render/picker/druk/OTP sprawdzać wzrokowo w przeglądarce.
+## Weryfikacja
+
+**Matematyka — `node check-math.js`.** Skrypt wyciąga inline `<script>` regexem i odpala go w `vm` ze stubem `document`/`supabase`/`localStorage`, po czym porównuje `recalc()` z ręcznie policzonymi kwotami. `recalc()` zwraca pełny obiekt sum — ten sam kod liczy ekran, XLSX i wydruk, więc jeden test pokrywa wszystkie trzy. Odpalaj po **każdej** zmianie w pliku, także czysto wizualnej: to najtańszy dowód, że przebudowa CSS nie ruszyła logiki.
+
+Dwie pułapki stuba, o które łatwo się potknąć pisząc podobny test:
+- `let K` i `function recalc` żyją w zasięgu skryptu, **nie** na `globalThis` — trzeba je wystawić dopiskiem `;globalThis.__K=K;globalThis.__recalc=recalc;` do kodu podawanego do `runInContext`.
+- Stawki ustawiaj przez **DOM** (`$('s-bl').value=…`), nie przez `K.stawki` — `refreshTotals()` zaczyna od `readStawkiFromDom()` i nadpisze wartości wstrzyknięte prosto do stanu. Dodatkowo `init()` woła `writeDomFromState()`, więc zaraz po starcie w stubie siedzą domyślne stawki z `blankState()`.
+
+**Wydruk — bez okna drukowania.** W DevTools podmień media query na ekranowe i obejrzyj stronę normalnie:
+
+```js
+for (const sh of document.styleSheets)
+  for (const r of sh.cssRules)
+    if (r.media && r.media.mediaText.includes('print')) r.media.mediaText = 'screen';
+```
+
+Sprawdzaj wtedy trzy rzeczy: czy tekst jest czarny na białym (tokeny motywu są nadpisywane po nazwie — nowy token trzeba dopisać do listy w `@media print`), czy złapał się `--serif`, i czy wiersze o wartości 0 znikają (wstaw pozycję z zerową kwotą i sprawdź, że `tr.zero` ma `display:none`).
+
+Render / picker / OTP / oba motywy — wzrokowo w przeglądarce.
 
 ## Poza zakresem v1 (przyszłość — patrz `PLAN.md`)
 
