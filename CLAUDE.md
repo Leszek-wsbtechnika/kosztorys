@@ -17,7 +17,7 @@ Nie ma bundlera, lintera ani frameworka testowego. `check-math.js` jest samowyst
 
 CDN (wymaga internetu przy pierwszym ładowaniu): SheetJS `xlsx 0.18.5`, `@supabase/supabase-js 2.105.1` (oba z `integrity` hash), Google Fonts (Orbitron / Inter / Share Tech Mono). Cel: profesjonalny kosztorys naprawy pojazdów/maszyn (naczepy, przyczepy, ciągniki, maszyny) w układzie zbliżonym do Audatex/Audanet, do ubezpieczyciela. Pełne uzasadnienie struktury i badania w `PLAN.md`.
 
-`index.html` (~1030 linii) — jeden plik CSS+HTML+JS; poza nim w repo są tylko `Dockerfile` + `Caddyfile` (deploy) i `check-math.js` (test). Frontend **spójny z `katalog`** (te same tokeny OKLCH i fonty Orbitron/Inter/Share Tech Mono) — patrz sekcja Design System. Komentarz autora po `<head>` jest wymagany (zasada z `../CLAUDE.md`).
+`index.html` (~1320 linii) — jeden plik CSS+HTML+JS; poza nim w repo są tylko `Dockerfile` + `Caddyfile` (deploy) i `check-math.js` (test). Frontend **spójny z `katalog`** (te same tokeny OKLCH i fonty Orbitron/Inter/Share Tech Mono) — patrz sekcja Design System. Komentarz autora po `<head>` jest wymagany (zasada z `../CLAUDE.md`).
 
 ## Integracja z katalogsystem.pl (projekt `katalog`)
 
@@ -31,7 +31,7 @@ Logowanie jest **nieblokujące — odwrotnie niż w katalogu** (gdzie login bram
 
 Najważniejsza zasada pliku. Pola w tabelach mają `oninput`/`onchange`. Gdyby handler przebudowywał `<tbody>` (innerHTML), edytowany `<input>` zostałby zniszczony → utrata focusu po jednej literze.
 
-- `refreshTotals()` — przelicza sumy i aktualizuje **tylko komórki wartości po `id`** (`vc-{id}`, `rs-{id}`, `rv-{id}`, `lr-{id}`, `lt-{id}`) + subtotale + `#sumbox`. Przełącza też klasę `tr.zero` na wierszach o wartości 0 (przez `cell.closest('tr')`; matdod po `mk-{id}`) — używana do ukrycia ich na wydruku. Nie dotyka inputów. Zwraca obiekt sum. Wołane przy **każdym** `oninput` (`upd()`, `onStawki()`).
+- `refreshTotals()` — przelicza sumy i aktualizuje **tylko komórki wartości po `id`** (`vc-{id}`, `rs-{id}`, `rv-{id}`, `lr-{id}`, `lt-{id}`) + subtotale + `#sumbox`. Przełącza też klasę `tr.zero` na wierszach o wartości 0 (przez `cell.closest('tr')`; matdod po `mk-{id}`) — dziś tylko sygnał wizualny na ekranie, bo wydruk filtruje pozycje sam. Nie dotyka inputów. Zwraca obiekt sum. Wołane przy **każdym** `oninput` (`upd()`, `onStawki()`).
 - `recalc()` = `render*()` (pełna przebudowa wierszy) + `refreshTotals()`. Wołane **tylko** przy dodaj / usuń / wczytaj / reset.
 
 **Reguła: żaden handler `oninput` nie może wołać `recalc()` ani przebudowywać wiersza.** Dodając nową kolumnę liczoną, nadaj komórce `id` i aktualizuj ją w `refreshTotals()`.
@@ -54,7 +54,7 @@ DOM↔stan: `readMetaFromDom`/`readStawkiFromDom` (DOM→K), `writeDomFromState`
 - lakier: `robocizna = czasRbg*stawka_lak`; `materiał = matKwota>0 ? matKwota : robocizna*matlak%` (wpisana kwota ma pierwszeństwo; 0 = auto ze wskaźnika; `matlak` domyślnie 40%)
 - normalia = `suma_części * normalia%` (auto w podsumowaniu; blok „Materiały dodatkowe" to osobne pozycje ręczne, **nie** normalia) Dawna pozycja „materiały pomocnicze (% robocizny)" zniknęła — normalia ją zastępują, a `matpom` ze starych zapisów jest ignorowane.
 - podsumowanie: Σ → netto → VAT → brutto → korekty (`+ ubytek merkantylny`, `− udział własny`); `K.podstawa` ('netto'/'brutto') wybiera bazę kwoty końcowej
-- `round2()` na każdym kroku (jak w `katalog`/`czas`)
+- `round2()` na każdym kroku (jak w `katalog`/`czas`); `fmtPl()` ma `useGrouping:'always'`, bo pl-PL domyślnie nie grupuje czterech cyfr i w kolumnie kwot „4258,29" stało obok „18 514,30"
 
 **Stawki to domyślne dla nowych wierszy, nie globalny mnożnik.** `addCzesc`/`submitEntry` prefillują `rabat`/`potracenie` z `K.stawki`, ale faktyczna wartość jest per-pozycja → brak podwójnego liczenia.
 
@@ -83,6 +83,13 @@ i wypychało kolumnę „Wartość netto" poza szerokość A4. `@media print` uk
   pojedynczy wiersz na końcu strony (sierota) jest przenoszony w całości.
 - Puste pola, zerowe stawki i sekcje bez pozycji **nie drukują się wcale**. `markZero()`/`tr.zero`
   zostały tylko dla ekranu — wydruk filtruje pozycje sam.
+- Sekcje są numerowane (`1 · Dane kosztorysu` … `7 · Podsumowanie`) numeratorem zliczanym w
+  `printBlocks()`, więc pominięcie pustej sekcji nie robi dziury w numeracji.
+- Stopka każdej strony: `Kosztorys sporządzony w programie: KosztorysSystem · normy czasowe
+  i ceny wg danych własnych` + numer kosztorysu po prawej.
+- **PDF powstaje przez „Zapisz jako PDF" w oknie druku** — świadomie bez biblioteki PDF, żeby nie
+  dokładać zależności CDN. Przycisk w appbarze (`doPrint()`) nazywa się „Drukuj / PDF" i buduje
+  dokument sam, bo `beforeprint` nie wszędzie jest pewne.
 
 ### Design System (wspólny z `katalog`)
 
