@@ -277,7 +277,9 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono)
   td input,td select,.fld input,.fld select,.fld textarea,.search-in{border:none !important;background:transparent !important;
     box-shadow:none !important;color:#000 !important;-webkit-appearance:none;appearance:none;padding:2px;font-family:var(--serif)}
   .fld label,label{color:#333}
-  td.val,.subtotal span,.sumrow .amt,.auto-mat{color:#000 !important}
+  /* Orbitron jest zbyt ozdobny na dokument dla ubezpieczyciela — kwoty też idą szeryfem */
+  td.val,.subtotal span,.sumrow .amt,.auto-mat,.stawki .fld input,td.num input{color:#000 !important;
+    font-family:var(--serif) !important}
   .subtotal{background:#fff !important;border-top:1px dashed #999;color:#000}
   .sumbox{border:1px dashed #999}
   .sumrow{border-bottom:1px dashed #bbb}
