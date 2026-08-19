@@ -38,7 +38,7 @@ Najważniejsza zasada pliku. Pola w tabelach mają `oninput`/`onchange`. Gdyby h
 
 ### Stan i persystencja
 
-Globalny obiekt `K` (`blankState()`): `meta`, `obiekt`, `stawki`, oraz tablice `czesci` / `robocizna` / `lakier` / `matdod` (każdy wiersz ma `id` z `uid()`), plus `uwagi`/`podpis*`/`podstawa`. localStorage: `kosztorys_v1` = `{K, idc}`, autosave debounced w `touch()`/`persist()`. JSON eksport/import to surowy zrzut `K`; XLSX (`exportXlsx`) i druk generowane z `K`. Druk (`@media print`) nadpisuje tokeny motywu na biel/czerń, ramki = szara linia przerywana, i **ukrywa wiersze o wartości 0** (`tr.zero`). Motyw ekranu (`light`/`dark`) nie wpływa na wydruk.
+Globalny obiekt `K` (`blankState()`): `meta`, `obiekt`, `stawki`, oraz tablice `czesci` / `robocizna` / `lakier` / `matdod` (każdy wiersz ma `id` z `uid()`), plus `uwagi`/`podpis*`/`podstawa`. localStorage: `kosztorys_v1` = `{K, idc}`, autosave debounced w `touch()`/`persist()`. `loadPersist()` merguje wczytany stan z `blankState()` (osobno `stawki`), więc **nowa stawka z domyślną wartością wchodzi także do starych zapisów** i zmienia ich sumy — świadoma decyzja przy normaliach (2%), o której trzeba pamiętać dodając kolejne stawki. JSON eksport/import to surowy zrzut `K`; XLSX (`exportXlsx`) i druk generowane z `K`. Druk (`@media print`) nadpisuje tokeny motywu na biel/czerń, ramki = szara linia przerywana, i **ukrywa wiersze o wartości 0** (`tr.zero`). Motyw ekranu (`light`/`dark`) nie wpływa na wydruk.
 
 DOM↔stan: `readMetaFromDom`/`readStawkiFromDom` (DOM→K), `writeDomFromState` (K→DOM, po wczytaniu/imporcie). **`readMetaFromDom` podmienia całe `K.obiekt`**, więc pola bez odpowiednika w DOM (dziś `vinKrotki`) trzeba w nim jawnie przepisać — inaczej giną przy pierwszym `touch()`.
 
