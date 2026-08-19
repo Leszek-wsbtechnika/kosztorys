@@ -160,10 +160,26 @@ td input,td select,td input[type=text],td input[type=number],td input[type=date]
 td input:hover,td select:hover{border-color:var(--border)}
 td input:focus,td select:focus,td input[type=number]:focus,td input[type=text]:focus{border-color:var(--primary);
   background-color:var(--surface2)}
-td.num input{text-align:right;font-family:var(--mono)}
+/* pola liczbowe w tabelach dostają ramkę — bez niej wtapiają się w wiersz i nie widać, że są edytowalne */
+td.num input{text-align:right;font-family:var(--mono);border-color:var(--border);background-color:var(--surface2)}
+td.num input:focus{border-color:var(--primary);background-color:var(--surface3)}
+td.num input.rbg{border-color:var(--border-bright);font-weight:600}
 td.val{text-align:right;font-family:var(--display);font-weight:700;font-size:.8rem;color:var(--primary);white-space:nowrap}
 td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono);font-size:.72rem}
 .auto-mat{font-family:var(--mono);font-size:.62rem;color:var(--primary);text-align:right;margin-top:2px;white-space:nowrap}
+/* ostrzeżenie pod polem (VIN krótszy niż 17 znaków) */
+.fld-warn{display:none;font-family:var(--mono);font-size:.62rem;line-height:1.5;color:var(--danger);
+  background:var(--danger-dim);border:1px solid var(--danger);padding:6px 8px;margin-top:4px;
+  align-items:center;gap:8px;flex-wrap:wrap}
+.fld-warn.on{display:flex}
+.fld-warn button{background:transparent;border:1px solid var(--danger);color:var(--danger);font-family:var(--display);
+  font-size:.58rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;transition:all .15s}
+.fld-warn button:hover{background:var(--danger);color:var(--surface)}
+#o-vin{text-transform:uppercase;letter-spacing:.04em}
+/* blok warsztatu — pokazywany dopiero gdy sporządzającym jest warsztat */
+.warsztat-box{display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.warsztat-box.on{display:grid}
+.warsztat-act{display:flex;flex-direction:row;align-items:flex-end;gap:8px}
 .rowdel{background:none;border:none;color:var(--muted-lt);font-family:var(--mono);font-size:1rem;line-height:1;
   padding:2px 6px;transition:color .15s}
 .rowdel:hover{color:var(--danger)}
@@ -335,11 +351,24 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono)
       <div class="grid g4">
         <div class="fld"><label>Nr kosztorysu</label><input id="m-nr" oninput="touch()"></div>
         <div class="fld"><label>Data</label><input type="date" id="m-data" oninput="touch()"></div>
-        <div class="fld"><label>Sporządzający</label><input id="m-sporz" placeholder="rzeczoznawca / warsztat" oninput="touch()"></div>
+        <div class="fld"><label>Sporządzający</label><input id="m-sporz" placeholder="imię i nazwisko" oninput="touch()"></div>
+        <div class="fld"><label>Sporządzający — rodzaj</label>
+          <select id="m-sporz-typ" onchange="onSporzTyp(true)">
+            <option>Rzeczoznawca</option><option>Warsztat</option>
+          </select></div>
         <div class="fld"><label>Zleceniodawca / poszkodowany</label><input id="m-zlec" oninput="touch()"></div>
         <div class="fld"><label>Ubezpieczyciel</label><input id="m-ubez" oninput="touch()"></div>
         <div class="fld"><label>Nr szkody</label><input id="m-szkoda" oninput="touch()"></div>
         <div class="fld"><label>Nr polisy</label><input id="m-polisa" oninput="touch()"></div>
+      </div>
+      <!-- widoczne tylko dla rodzaju „Warsztat"; dane można zapamiętać między kosztorysami -->
+      <div class="grid g3 warsztat-box" id="warsztat-box">
+        <div class="fld"><label>Nazwa warsztatu</label><input id="w-nazwa" oninput="touch()"></div>
+        <div class="fld"><label>Adres warsztatu</label><input id="w-adres" placeholder="ulica, kod, miejscowość" oninput="touch()"></div>
+        <div class="fld warsztat-act no-print">
+          <button class="tbtn" onclick="saveWarsztat()" title="Zapisz dane warsztatu na tym urządzeniu">💾 Zapamiętaj</button>
+          <button class="tbtn" onclick="forgetWarsztat()" title="Usuń zapamiętane dane warsztatu">✖ Zapomnij</button>
+        </div>
       </div>
     </div>
   </div>
@@ -356,7 +385,10 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono)
           </select></div>
         <div class="fld"><label>Marka</label><input id="o-marka" oninput="touch()"></div>
         <div class="fld"><label>Model / typ</label><input id="o-model" oninput="touch()"></div>
-        <div class="fld"><label>VIN / nr fabryczny</label><input id="o-vin" oninput="touch()"></div>
+        <div class="fld"><label>VIN / nr fabryczny</label>
+          <input id="o-vin" maxlength="17" spellcheck="false" autocomplete="off" placeholder="17 znaków"
+                 oninput="vinInput(this)" onblur="vinCheck()">
+          <div class="fld-warn no-print" id="vin-warn"></div></div>
         <div class="fld"><label>Nr rejestracyjny</label><input id="o-rej" oninput="touch()"></div>
         <div class="fld"><label>Rok produkcji</label><input id="o-rok" oninput="touch()"></div>
         <div class="fld"><label>Przebieg / mth</label><input id="o-przebieg" oninput="touch()"></div>
@@ -376,6 +408,7 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono)
         <div class="fld"><label>Stawka rbg — lakiernicza (zł)</label><input type="number" id="s-lak" value="130" oninput="onStawki()"></div>
         <div class="fld"><label>Wskaźnik materiału lak. (% robocizny lak.)</label><input type="number" id="s-matlak" value="40" oninput="onStawki()"></div>
         <div class="fld"><label>Materiały pomocnicze (% robocizny)</label><input type="number" id="s-matpom" value="2" oninput="onStawki()"></div>
+        <div class="fld"><label>Normalia (% z części)</label><input type="number" id="s-normalia" value="2" oninput="onStawki()"></div>
         <div class="fld"><label>Rabat na części — domyślny (%)</label><input type="number" id="s-rabat" value="0" oninput="onStawki()"></div>
         <div class="fld"><label>Potrącenie amortyzacyjne — domyślne (%)</label><input type="number" id="s-amort" value="0" oninput="onStawki()"></div>
         <div class="fld"><label>VAT (%)</label><input type="number" id="s-vat" value="23" oninput="onStawki()"></div>
@@ -451,10 +484,10 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono)
     </div>
   </div>
 
-  <!-- ===== Materiały dodatkowe i normalia ===== -->
+  <!-- ===== Materiały dodatkowe (pozycje ręczne) ===== -->
   <div class="doc">
-    <div class="doc-head"><h2>Materiały dodatkowe i normalia</h2>
-      <span class="badge no-print">materiały pomocnicze (% robocizny) liczone automatycznie w podsumowaniu</span></div>
+    <div class="doc-head"><h2>Materiały dodatkowe</h2>
+      <span class="badge no-print">materiały pomocnicze (% robocizny) i normalia (% z części) liczone automatycznie w podsumowaniu</span></div>
     <div class="doc-body" style="padding:0">
       <div class="tbl-scroll">
         <table>
@@ -464,7 +497,7 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono)
         </table>
       </div>
       <div class="tfoot-add"><button class="addbtn" onclick="addMatDod()">＋ Dodaj pozycję</button></div>
-      <div class="subtotal">Razem materiały dodatkowe i normalia: <span id="st-matdod">0,00 zł</span></div>
+      <div class="subtotal">Razem materiały dodatkowe: <span id="st-matdod">0,00 zł</span></div>
     </div>
   </div>
 
@@ -583,9 +616,12 @@ const uid = () => idc++;
 
 function blankState(){
   return {
-    meta:{ nr:'', data:new Date().toISOString().slice(0,10), sporz:'', zlec:'', ubez:'', szkoda:'', polisa:'' },
-    obiekt:{ typ:'Naczepa', marka:'', model:'', vin:'', rej:'', rok:'', przebieg:'', data1:'' },
-    stawki:{ bl:120, mech:120, lak:130, matlak:40, matpom:2, rabat:0, amort:0, vat:23, ubytek:0, udzial:0 },
+    meta:{ nr:'', data:new Date().toISOString().slice(0,10), sporz:'', sporzTyp:'Rzeczoznawca',
+      zlec:'', ubez:'', szkoda:'', polisa:'' },
+    // vinKrotki = użytkownik potwierdził, że numer jest krótszy niż 17 znaków (maszyna, nie pojazd drogowy)
+    obiekt:{ typ:'Naczepa', marka:'', model:'', vin:'', vinKrotki:false, rej:'', rok:'', przebieg:'', data1:'' },
+    warsztat:{ nazwa:'', adres:'' },
+    stawki:{ bl:120, mech:120, lak:130, matlak:40, matpom:2, normalia:2, rabat:0, amort:0, vat:23, ubytek:0, udzial:0 },
     czesci:[], robocizna:[], lakier:[], matdod:[],
     uwagi:'', podpis1:'', podpis2:'', podstawa:'brutto'
   };
@@ -601,6 +637,51 @@ function toast(msg,type='',ms=2600){ const t=$('toast'); t.textContent=msg; t.cl
 function markZero(cell,isZero){ if(cell&&cell.closest){ const tr=cell.closest('tr'); if(tr) tr.classList.toggle('zero',isZero); } }
 let _saveT=null;
 function touch(){ readMetaFromDom(); clearTimeout(_saveT); _saveT=setTimeout(persist,400); }
+
+/* ================= VIN =================
+   17 znaków to długość VIN pojazdów drogowych; maszyny rolnicze/budowlane mają krótsze numery
+   fabryczne, więc krótszy wpis nie jest błędem — pytamy i zapamiętujemy odpowiedź w K.obiekt.vinKrotki. */
+function vinInput(el){
+  const pos=el.selectionStart, up=el.value.toUpperCase().slice(0,17);   // maxlength nie łapie autofilla
+  if(up!==el.value){ el.value=up; el.setSelectionRange(pos,pos); }
+  K.obiekt.vinKrotki=false;      // zmiana numeru unieważnia wcześniejsze potwierdzenie
+  vinWarn(false); touch();
+}
+function vinCheck(){
+  const v=$('o-vin').value.trim();
+  vinWarn(v.length>0 && v.length<17 && !K.obiekt.vinKrotki, v.length);
+}
+function vinWarn(on,len){
+  const w=$('vin-warn'); if(!w) return;
+  w.className='fld-warn no-print'+(on?' on':'');
+  w.innerHTML = on
+    ? `<span>Numer ma ${len} zn., VIN pojazdu ma 17. Numer jest krótszy (maszyna, nr fabryczny)?</span>
+       <button type="button" onclick="vinAccept()">Tak, krótszy</button>`
+    : '';
+}
+function vinAccept(){ K.obiekt.vinKrotki=true; vinWarn(false); persist(); }
+
+/* ================= Warsztat =================
+   Dane warsztatu żyją w kosztorysie (K.warsztat), ale można je zapamiętać na urządzeniu
+   pod osobnym kluczem — wtedy wskakują same do każdego nowego kosztorysu. */
+const WARSZTAT_KEY='kosztorys_warsztat';
+function onSporzTyp(fromUser){
+  const warsztat=$('m-sporz-typ').value==='Warsztat';
+  $('warsztat-box').classList.toggle('on',warsztat);
+  if(warsztat && fromUser && !$('w-nazwa').value && !$('w-adres').value){
+    const zap=loadWarsztat();
+    if(zap){ $('w-nazwa').value=zap.nazwa||''; $('w-adres').value=zap.adres||''; toast('Wczytano zapamiętany warsztat'); }
+  }
+  if(fromUser) touch();
+}
+function loadWarsztat(){ try{ return JSON.parse(localStorage.getItem(WARSZTAT_KEY)||'null'); }catch(e){ return null; } }
+function saveWarsztat(){
+  readMetaFromDom();
+  if(!K.warsztat.nazwa && !K.warsztat.adres){ toast('Najpierw wpisz nazwę lub adres','error'); return; }
+  try{ localStorage.setItem(WARSZTAT_KEY,JSON.stringify(K.warsztat)); toast('Warsztat zapamiętany','ok'); }
+  catch(e){ toast('Nie udało się zapisać','error'); }
+}
+function forgetWarsztat(){ localStorage.removeItem(WARSZTAT_KEY); toast('Zapamiętany warsztat usunięty'); }
 
 /* ================= Stawki: zwróć stawkę rbg wg kategorii ================= */
 function stawkaFor(kat){
@@ -638,7 +719,7 @@ function renderRobocizna(){
       <td><input value="${esc(r.opis)}" oninput="upd('robocizna',${r.id},'opis',this.value)"></td>
       <td><select onchange="upd('robocizna',${r.id},'kategoria',this.value)">${opt(['BL','MECH','EL','DEM-MONT'],r.kategoria)}</select></td>
       <td><select onchange="upd('robocizna',${r.id},'rodzaj',this.value)">${opt(['W','N','Wym/Zam'],r.rodzaj)}</select></td>
-      <td class="num"><input type="number" min="0" step="0.1" value="${r.czasRbg}" oninput="upd('robocizna',${r.id},'czasRbg',this.value,true)"></td>
+      <td class="num"><input class="rbg" type="number" min="0" step="0.1" value="${r.czasRbg}" oninput="upd('robocizna',${r.id},'czasRbg',this.value,true)"></td>
       <td class="val" id="rs-${r.id}">${fmtPl(stawkaFor(r.kategoria))}</td>
       <td class="val" id="rv-${r.id}">${zl(valRobocizna(r))}</td>
       <td class="no-print"><button class="rowdel" onclick="del('robocizna',${r.id})">×</button></td>`;
@@ -654,7 +735,7 @@ function renderLakier(){
       <td class="lp">${i+1}</td>
       <td><input value="${esc(r.element)}" oninput="upd('lakier',${r.id},'element',this.value)"></td>
       <td class="num"><input type="number" min="0" step="0.1" value="${r.m2}" oninput="upd('lakier',${r.id},'m2',this.value,true)"></td>
-      <td class="num"><input type="number" min="0" step="0.1" value="${r.czasRbg}" oninput="upd('lakier',${r.id},'czasRbg',this.value,true)"></td>
+      <td class="num"><input class="rbg" type="number" min="0" step="0.1" value="${r.czasRbg}" oninput="upd('lakier',${r.id},'czasRbg',this.value,true)"></td>
       <td class="val" id="lr-${r.id}">${zl(v.robocizna)}</td>
       <td class="num"><input type="number" min="0" step="0.01" value="${r.matKwota}" placeholder="auto" oninput="upd('lakier',${r.id},'matKwota',this.value,true)"><div class="auto-mat" id="lm-${r.id}"></div></td>
       <td class="val" id="lt-${r.id}">${zl(v.total)}</td>
@@ -712,9 +793,11 @@ function refreshTotals(){
   lakRob=round2(lakRob); lakMat=round2(lakMat);
   const sumLak=round2(lakRob+lakMat);
   const matPom=round2((sumRob+lakRob)*num(K.stawki.matpom)/100);
+  // normalia liczone automatycznie od wartości części — zero, gdy nie ma żadnych części
+  const normalia=round2(sumCz*num(K.stawki.normalia)/100);
   const sumMatDod=round2(K.matdod.reduce((s,r)=>s+num(r.kwota),0));
 
-  const razemNetto=round2(sumCz+sumRob+sumLak+matPom+sumMatDod);
+  const razemNetto=round2(sumCz+sumRob+sumLak+matPom+normalia+sumMatDod);
   const vatKw=round2(razemNetto*num(K.stawki.vat)/100);
   const razemBrutto=round2(razemNetto+vatKw);
 
@@ -733,7 +816,8 @@ function refreshTotals(){
     <div class="sumrow"><span class="lbl">Lakierowanie — robocizna</span><span class="amt">${zl(lakRob)}</span></div>
     <div class="sumrow"><span class="lbl">Lakierowanie — materiał (${wsk}% z robocizny lakierniczej)</span><span class="amt">${zl(lakMat)}</span></div>
     <div class="sumrow"><span class="lbl">Materiały pomocnicze (${fmtPl(K.stawki.matpom)}%)</span><span class="amt">${zl(matPom)}</span></div>
-    <div class="sumrow"><span class="lbl">Materiały dodatkowe i normalia</span><span class="amt">${zl(sumMatDod)}</span></div>
+    <div class="sumrow"><span class="lbl">Normalia (${fmtPl(K.stawki.normalia)}% z części)</span><span class="amt">${zl(normalia)}</span></div>
+    <div class="sumrow"><span class="lbl">Materiały dodatkowe (pozycje ręczne)</span><span class="amt">${zl(sumMatDod)}</span></div>
     <div class="sumrow net"><span class="lbl">Razem netto</span><span class="amt">${zl(razemNetto)}</span></div>
     <div class="sumrow"><span class="lbl">VAT (${fmtPl(K.stawki.vat)}%)</span><span class="amt">${zl(vatKw)}</span></div>
     <div class="sumrow gross"><span class="lbl">Razem brutto</span><span class="amt">${zl(razemBrutto)}</span></div>
@@ -746,7 +830,7 @@ function refreshTotals(){
     <div class="sumrow corr add"><span class="lbl">+ Merkantylny ubytek wartości</span><span class="amt">${zl(ubytek)}</span></div>
     <div class="sumrow corr"><span class="lbl">− Udział własny</span><span class="amt">−${zl(udzial)}</span></div>
     <div class="sumrow final"><span class="lbl">Kwota końcowa (${K.podstawa})</span><span class="amt">${zl(koncowa)}</span></div>`;
-  return { sumCz,sumRob,lakRob,lakMat,sumLak,matPom,sumMatDod,razemNetto,vatKw,razemBrutto,ubytek,udzial,koncowa };
+  return { sumCz,sumRob,lakRob,lakMat,sumLak,matPom,normalia,sumMatDod,razemNetto,vatKw,razemBrutto,ubytek,udzial,koncowa };
 }
 function opt2(arr,sel){ return arr.map(v=>`<option value="${v}" ${v===sel?'selected':''}>${v.charAt(0).toUpperCase()+v.slice(1)}</option>`).join(''); }
 
@@ -792,25 +876,32 @@ function submitEntry(){
 
 /* ================= DOM <-> stan (meta/obiekt/stawki) ================= */
 function readMetaFromDom(){
-  K.meta={ nr:$('m-nr').value, data:$('m-data').value, sporz:$('m-sporz').value, zlec:$('m-zlec').value,
-    ubez:$('m-ubez').value, szkoda:$('m-szkoda').value, polisa:$('m-polisa').value };
+  K.meta={ nr:$('m-nr').value, data:$('m-data').value, sporz:$('m-sporz').value, sporzTyp:$('m-sporz-typ').value,
+    zlec:$('m-zlec').value, ubez:$('m-ubez').value, szkoda:$('m-szkoda').value, polisa:$('m-polisa').value };
+  const vinKrotki=K.obiekt.vinKrotki;   // flaga nie ma pola w DOM — przenosimy ją ręcznie
   K.obiekt={ typ:$('o-typ').value, marka:$('o-marka').value, model:$('o-model').value, vin:$('o-vin').value,
-    rej:$('o-rej').value, rok:$('o-rok').value, przebieg:$('o-przebieg').value, data1:$('o-data1').value };
+    vinKrotki, rej:$('o-rej').value, rok:$('o-rok').value, przebieg:$('o-przebieg').value, data1:$('o-data1').value };
+  K.warsztat={ nazwa:$('w-nazwa').value, adres:$('w-adres').value };
   K.uwagi=$('m-uwagi').value; K.podpis1=$('m-podpis1').value; K.podpis2=$('m-podpis2').value;
 }
 function readStawkiFromDom(){
   K.stawki={ bl:num($('s-bl').value), mech:num($('s-mech').value), lak:num($('s-lak').value),
-    matlak:num($('s-matlak').value), matpom:num($('s-matpom').value), rabat:num($('s-rabat').value),
+    matlak:num($('s-matlak').value), matpom:num($('s-matpom').value), normalia:num($('s-normalia').value),
+    rabat:num($('s-rabat').value),
     amort:num($('s-amort').value), vat:num($('s-vat').value), ubytek:num($('s-ubytek').value), udzial:num($('s-udzial').value) };
 }
 function writeDomFromState(){
   const m=K.meta,o=K.obiekt,s=K.stawki;
   $('m-nr').value=m.nr; $('m-data').value=m.data; $('m-sporz').value=m.sporz; $('m-zlec').value=m.zlec;
   $('m-ubez').value=m.ubez; $('m-szkoda').value=m.szkoda; $('m-polisa').value=m.polisa;
+  $('m-sporz-typ').value=m.sporzTyp||'Rzeczoznawca';
+  $('w-nazwa').value=(K.warsztat&&K.warsztat.nazwa)||''; $('w-adres').value=(K.warsztat&&K.warsztat.adres)||'';
+  onSporzTyp(false); vinCheck();
   $('o-typ').value=o.typ; $('o-marka').value=o.marka; $('o-model').value=o.model; $('o-vin').value=o.vin;
   $('o-rej').value=o.rej; $('o-rok').value=o.rok; $('o-przebieg').value=o.przebieg; $('o-data1').value=o.data1;
   $('s-bl').value=s.bl; $('s-mech').value=s.mech; $('s-lak').value=s.lak; $('s-matlak').value=s.matlak;
-  $('s-matpom').value=s.matpom; $('s-rabat').value=s.rabat; $('s-amort').value=s.amort; $('s-vat').value=s.vat;
+  $('s-matpom').value=s.matpom; $('s-normalia').value=s.normalia; $('s-rabat').value=s.rabat;
+  $('s-amort').value=s.amort; $('s-vat').value=s.vat;
   $('s-ubytek').value=s.ubytek; $('s-udzial').value=s.udzial;
   $('m-uwagi').value=K.uwagi||''; $('m-podpis1').value=K.podpis1||''; $('m-podpis2').value=K.podpis2||'';
 }
@@ -879,7 +970,7 @@ function exportXlsx(){
   K.lakier.forEach((r,i)=>{ const v=valLakier(r); rows.push([i+1,r.element,num(r.m2),num(r.czasRbg),v.robocizna,v.mat,v.total]); });
   rows.push(['','','','','','Razem',t.sumLak]);
   rows.push([]);
-  rows.push(['MATERIAŁY DODATKOWE I NORMALIA']);
+  rows.push(['MATERIAŁY DODATKOWE (POZYCJE RĘCZNE)']);
   rows.push(['Lp','Opis','Kwota netto']);
   K.matdod.forEach((r,i)=>rows.push([i+1,r.opis,num(r.kwota)]));
   rows.push([]);
@@ -888,7 +979,8 @@ function exportXlsx(){
   rows.push(['Robocizna naprawcza',t.sumRob]);
   rows.push(['Lakierowanie (robocizna+materiał)',t.sumLak]);
   rows.push([`Materiały pomocnicze (${K.stawki.matpom}%)`,t.matPom]);
-  rows.push(['Materiały dodatkowe i normalia',t.sumMatDod]);
+  rows.push([`Normalia (${K.stawki.normalia}% z części)`,t.normalia]);
+  rows.push(['Materiały dodatkowe (pozycje ręczne)',t.sumMatDod]);
   rows.push(['RAZEM NETTO',t.razemNetto]);
   rows.push([`VAT (${K.stawki.vat}%)`,t.vatKw]);
   rows.push(['RAZEM BRUTTO',t.razemBrutto]);

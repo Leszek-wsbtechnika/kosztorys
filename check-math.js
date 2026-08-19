@@ -47,7 +47,7 @@ vm.runInContext(m[1] + '\n;globalThis.__K=K;globalThis.__recalc=recalc;', ctx);
 
 const K = ctx.__K, $ = id => ctx.document.getElementById(id);
 
-Object.entries({ 's-bl':120, 's-mech':110, 's-lak':130, 's-matlak':40, 's-matpom':12,
+Object.entries({ 's-bl':120, 's-mech':110, 's-lak':130, 's-matlak':40, 's-matpom':12, 's-normalia':2,
   's-rabat':0, 's-amort':0, 's-vat':23, 's-ubytek':500, 's-udzial':1000 })
   .forEach(([id, v]) => { $(id).value = String(v); });
 
@@ -68,12 +68,13 @@ const OCZEKIWANE = {
   lakMat:306,         // 3*130*0.4 + 150
   sumLak:956,
   matPom:159.3,       // 12% * (677.5 + 650)
+  normalia:23.51,     // 2% * 1175.55 (liczone od części)
   sumMatDod:87.4,
-  razemNetto:3055.75,
-  vatKw:702.82,
-  razemBrutto:3758.57,
+  razemNetto:3079.26,
+  vatKw:708.23,
+  razemBrutto:3787.49,
   ubytek:500, udzial:1000,
-  koncowa:3258.57     // brutto + ubytek − udział własny
+  koncowa:3287.49     // brutto + ubytek − udział własny
 };
 
 const wynik = ctx.__recalc();

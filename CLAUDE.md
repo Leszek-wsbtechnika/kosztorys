@@ -40,7 +40,12 @@ Najważniejsza zasada pliku. Pola w tabelach mają `oninput`/`onchange`. Gdyby h
 
 Globalny obiekt `K` (`blankState()`): `meta`, `obiekt`, `stawki`, oraz tablice `czesci` / `robocizna` / `lakier` / `matdod` (każdy wiersz ma `id` z `uid()`), plus `uwagi`/`podpis*`/`podstawa`. localStorage: `kosztorys_v1` = `{K, idc}`, autosave debounced w `touch()`/`persist()`. JSON eksport/import to surowy zrzut `K`; XLSX (`exportXlsx`) i druk generowane z `K`. Druk (`@media print`) nadpisuje tokeny motywu na biel/czerń, ramki = szara linia przerywana, i **ukrywa wiersze o wartości 0** (`tr.zero`). Motyw ekranu (`light`/`dark`) nie wpływa na wydruk.
 
-DOM↔stan: `readMetaFromDom`/`readStawkiFromDom` (DOM→K), `writeDomFromState` (K→DOM, po wczytaniu/imporcie).
+DOM↔stan: `readMetaFromDom`/`readStawkiFromDom` (DOM→K), `writeDomFromState` (K→DOM, po wczytaniu/imporcie). **`readMetaFromDom` podmienia całe `K.obiekt`**, więc pola bez odpowiednika w DOM (dziś `vinKrotki`) trzeba w nim jawnie przepisać — inaczej giną przy pierwszym `touch()`.
+
+### VIN i dane warsztatu
+
+- **VIN**: `maxlength=17`, `vinInput()` wielkie litery (z zachowaniem pozycji kursora) i przycięcie do 17 znaków. Krótszy numer **nie jest błędem** — maszyny mają krótsze numery fabryczne — więc `vinCheck()` (na `blur`) pokazuje pytanie w `#vin-warn`, a `vinAccept()` zapisuje potwierdzenie w `K.obiekt.vinKrotki`. Każda edycja numeru kasuje flagę i pytanie wraca.
+- **Warsztat**: `K.meta.sporzTyp` (`Rzeczoznawca`/`Warsztat`) steruje widocznością bloku `#warsztat-box` (`onSporzTyp`). Dane siedzą w `K.warsztat` (część kosztorysu), a `saveWarsztat()`/`forgetWarsztat()` trzymają kopię pod **osobnym** kluczem localStorage `kosztorys_warsztat` — niezależnym od kosztorysu, więc przeżywa reset i wskakuje sama przy przełączeniu na „Warsztat" z pustymi polami.
 
 ### Wyliczenia (czysty JS)
 
@@ -48,6 +53,7 @@ DOM↔stan: `readMetaFromDom`/`readStawkiFromDom` (DOM→K), `writeDomFromState`
 - robocizna: `czasRbg * stawkaFor(kategoria)` — `BL`→stawka blacharska; `MECH`/`EL`/`DEM-MONT`→mechaniczna
 - lakier: `robocizna = czasRbg*stawka_lak`; `materiał = matKwota>0 ? matKwota : robocizna*matlak%` (wpisana kwota ma pierwszeństwo; 0 = auto ze wskaźnika; `matlak` domyślnie 40%)
 - materiały pomocnicze = `(robocizna + robocizna_lak) * matpom%` (auto w podsumowaniu)
+- normalia = `suma_części * normalia%` (auto w podsumowaniu; blok „Materiały dodatkowe" to osobne pozycje ręczne, **nie** normalia)
 - podsumowanie: Σ → netto → VAT → brutto → korekty (`+ ubytek merkantylny`, `− udział własny`); `K.podstawa` ('netto'/'brutto') wybiera bazę kwoty końcowej
 - `round2()` na każdym kroku (jak w `katalog`/`czas`)
 
