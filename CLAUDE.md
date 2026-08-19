@@ -12,7 +12,7 @@ open index.html   # bez serwera
 
 CDN (wymaga internetu przy pierwszym ładowaniu): SheetJS `xlsx 0.18.5`, `@supabase/supabase-js 2.105.1` (oba z `integrity` hash), Google Fonts (Archivo / Hanken Grotesk / JetBrains Mono). Brak build/bundlera/testów. Cel: profesjonalny kosztorys naprawy pojazdów/maszyn (naczepy, przyczepy, ciągniki, maszyny) w układzie zbliżonym do Audatex/Audanet, do ubezpieczyciela. Pełne uzasadnienie struktury i badania w `PLAN.md`.
 
-`index.html` (~960 linii) — jeden plik CSS+HTML+JS. Frontend wg systemu **Skybound** (skill `strona`) — patrz sekcja Design System. Komentarz autora po `<head>` jest wymagany (zasada z `../CLAUDE.md`).
+`index.html` (~1000 linii) — jeden plik CSS+HTML+JS. Frontend **spójny z `katalog`** (te same tokeny OKLCH i fonty Orbitron/Inter/Share Tech Mono) — patrz sekcja Design System. Komentarz autora po `<head>` jest wymagany (zasada z `../CLAUDE.md`).
 
 ## Integracja z katalogsystem.pl (projekt `katalog`)
 
@@ -33,7 +33,7 @@ Najważniejsza zasada pliku. Pola w tabelach mają `oninput`/`onchange`. Gdyby h
 
 ### Stan i persystencja
 
-Globalny obiekt `K` (`blankState()`): `meta`, `obiekt`, `stawki`, oraz tablice `czesci` / `robocizna` / `lakier` / `matdod` (każdy wiersz ma `id` z `uid()`), plus `uwagi`/`podpis*`/`podstawa`. localStorage: `kosztorys_v1` = `{K, idc}`, autosave debounced w `touch()`/`persist()`. JSON eksport/import to surowy zrzut `K`; XLSX (`exportXlsx`) i druk generowane z `K`. Druk (`@media print`) nadpisuje tokeny motywu na biel/czerń, ramki = szara linia przerywana, i **ukrywa wiersze o wartości 0** (`tr.zero`). Motyw ekranu (Skybound) nie wpływa na wydruk.
+Globalny obiekt `K` (`blankState()`): `meta`, `obiekt`, `stawki`, oraz tablice `czesci` / `robocizna` / `lakier` / `matdod` (każdy wiersz ma `id` z `uid()`), plus `uwagi`/`podpis*`/`podstawa`. localStorage: `kosztorys_v1` = `{K, idc}`, autosave debounced w `touch()`/`persist()`. JSON eksport/import to surowy zrzut `K`; XLSX (`exportXlsx`) i druk generowane z `K`. Druk (`@media print`) nadpisuje tokeny motywu na biel/czerń, ramki = szara linia przerywana, i **ukrywa wiersze o wartości 0** (`tr.zero`). Motyw ekranu (`light`/`dark`) nie wpływa na wydruk.
 
 DOM↔stan: `readMetaFromDom`/`readStawkiFromDom` (DOM→K), `writeDomFromState` (K→DOM, po wczytaniu/imporcie).
 
@@ -52,11 +52,15 @@ DOM↔stan: `readMetaFromDom`/`readStawkiFromDom` (DOM→K), `writeDomFromState`
 
 Jedno okno → fan-out do trzech bloków wg wypełnionych pól: cena lub nr katalogowy → `czesci`; robocizna naprawcza >0 → `robocizna`; robocizna lakiernicza >0 → `lakier`. Wspólna `nazwa`. Otwierane przyciskiem „＋ Dodaj pozycję" w blokach Części i Robocizna (obok „pusty wiersz" i pickera).
 
-### Design System (Skybound, skill `strona`)
+### Design System (wspólny z `katalog`)
 
-Tokeny w `:root` (ciemne) + `:root.day-theme` (jasne). **Domyślnie motyw ciemny** (night); `toggleTheme()` przełącza i zapisuje `localStorage['theme']`, `applyTheme()` w `init()`. Fonty: Archivo (`--font-display`, nagłówki), Hanken Grotesk (`--font-sans`, body), JetBrains Mono (`--font-mono`, liczby/inputy), Georgia (`--font-serif`, druk). Akcent pomarańczowy `--accent`, `border-radius:2px`.
+Design przeniesiony 1:1 z `katalog/index.html` — te same nazwy tokenów, ta sama paleta OKLCH, te same fonty. **Zmieniając wygląd, zmieniaj oba pliki razem**; poprzedni system (Skybound: Archivo/Hanken/JetBrains, ciemny domyślnie, `--accent` = pomarańcz) został usunięty w całości.
 
-**Aliasy zgodności**: stare nazwy zmiennych (`--ink`, `--line`, `--panel`, `--head`, `--accent-d`, `--ok`, `--danger`, `--zebra`) są zmapowane na tokeny Skybound w `:root` — dzięki temu stary CSS/JS działa bez przepisywania. Nagłówki modułów (`.doc-head h2`) **bez numerów**; pomarańczowy znacznik to `::before`.
+Tokeny: `:root` (**jasny — domyślny, jak w katalogu**) + `[data-theme="dark"]`. Motyw trzymany w `localStorage['theme']` jako `light`/`dark`; `normTheme()` mapuje stare wartości Skybound (`day`/`night`) na nowe, więc zapisany motyw sprzed zmiany nie wywraca strony. `applyTheme()` ustawia atrybut `data-theme` na `<html>` — **nie klasę** (`.day-theme` już nie istnieje).
+
+Semantyka kolorów jest katalogowa, **odwrotna niż w Skybound**: `--primary` = pomarańcz (CTA, kwoty, focus), `--accent` = zieleń (potwierdzenia, kwota końcowa), `--danger` = czerwień, `--brand-orange` = akcent marki (lewa krawędź appbara, znacznik `.doc-head h2::before`). Fonty: Orbitron (`--display` — nagłówki, przyciski, **wszystkie kwoty**), Inter (`--sans` — body, inputy), Share Tech Mono (`--mono` — etykiety, `THEAD`, metadane), Georgia (`--serif` — wyłącznie wydruk). `border-radius:0` wszędzie, płaskie powierzchnie + `1px` obramowania.
+
+Appbar powtarza header katalogu: `--surface` + `border-left:3px solid var(--brand-orange)`, lockup `KOSZTORYS`+pomarańczowy `SYSTEM` w Orbitron, pod nim `.brand-sub` w mono. `.tbtn` = katalogowy `.btn` (Orbitron, uppercase, `letter-spacing:.08em`), warianty `.primary` (wypełniony pomarańcz) i `.ok` (zielony).
 
 ## Weryfikacja (bez przeglądarki)
 
