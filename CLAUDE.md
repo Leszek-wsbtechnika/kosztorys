@@ -38,7 +38,7 @@ Najważniejsza zasada pliku. Pola w tabelach mają `oninput`/`onchange`. Gdyby h
 
 ### Stan i persystencja
 
-Globalny obiekt `K` (`blankState()`): `meta`, `obiekt`, `stawki`, oraz tablice `czesci` / `robocizna` / `lakier` / `matdod` (każdy wiersz ma `id` z `uid()`), plus `uwagi`/`podpis*`/`podstawa`. localStorage: `kosztorys_v1` = `{K, idc}`, autosave debounced w `touch()`/`persist()`. `loadPersist()` merguje wczytany stan z `blankState()` (osobno `stawki`), więc **nowa stawka z domyślną wartością wchodzi także do starych zapisów** i zmienia ich sumy — świadoma decyzja przy normaliach (2%), o której trzeba pamiętać dodając kolejne stawki. JSON eksport/import to surowy zrzut `K`; XLSX (`exportXlsx`) i druk generowane z `K`. Druk (`@media print`) nadpisuje tokeny motywu na biel/czerń, ramki = szara linia przerywana, i **ukrywa wiersze o wartości 0** (`tr.zero`). Motyw ekranu (`light`/`dark`) nie wpływa na wydruk.
+Globalny obiekt `K` (`blankState()`): `meta`, `obiekt`, `stawki`, oraz tablice `czesci` / `robocizna` / `lakier` / `matdod` (każdy wiersz ma `id` z `uid()`), plus `uwagi`/`podpis*`/`podstawa`. localStorage: `kosztorys_v1` = `{K, idc}`, autosave debounced w `touch()`/`persist()`. `loadPersist()` merguje wczytany stan z `blankState()` (osobno `stawki`), więc **nowa stawka z domyślną wartością wchodzi także do starych zapisów** i zmienia ich sumy — świadoma decyzja przy normaliach (2%), o której trzeba pamiętać dodając kolejne stawki. JSON eksport/import to surowy zrzut `K`; XLSX (`exportXlsx`) i druk generowane z `K`. Wydruk **nie korzysta z ekranowego DOM-u** — patrz sekcja Wydruk. Motyw ekranu (`light`/`dark`) nie wpływa na wydruk.
 
 DOM↔stan: `readMetaFromDom`/`readStawkiFromDom` (DOM→K), `writeDomFromState` (K→DOM, po wczytaniu/imporcie). **`readMetaFromDom` podmienia całe `K.obiekt`**, więc pola bez odpowiednika w DOM (dziś `vinKrotki`) trzeba w nim jawnie przepisać — inaczej giną przy pierwszym `touch()`.
 
@@ -63,6 +63,28 @@ DOM↔stan: `readMetaFromDom`/`readStawkiFromDom` (DOM→K), `writeDomFromState`
 
 Jedno okno → fan-out do trzech bloków wg wypełnionych pól: cena lub nr katalogowy → `czesci`; robocizna naprawcza >0 → `robocizna`; robocizna lakiernicza >0 → `lakier`. Wspólna `nazwa`. Otwierane przyciskiem „＋ Dodaj pozycję" w blokach Części i Robocizna (obok „pusty wiersz" i pickera).
 
+### Wydruk — osobny dokument, nie przemalowany ekran
+
+`buildPrintDoc()` renderuje `#printdoc` z `K`: statyczne `<table>`/`<div>`, **zero `<input>`**.
+Powód jest twardy: `<input>` nie zawija tekstu, więc drukowanie formularza ucinało nazwy części
+i wypychało kolumnę „Wartość netto" poza szerokość A4. `@media print` ukrywa ekran regułą
+`body > *:not(#printdoc){display:none}` — nie listą selektorów, żeby nowy modal nie wyciekł na papier.
+
+- **Wydruk nic nie liczy.** Sumy bierze z `refreshTotals()` (nie `recalc()` — ten przebudowuje
+  wiersze i zabiłby fokus przy Ctrl+P), wartości pozycji z `valCzesc()`/`valRobocizna()`/`valLakier()`.
+- Wejścia: `beforeprint` (Ctrl+P) oraz `doPrint()` z przycisku. **Nigdy z `init()`** — stub DOM
+  w `check-math.js` nie ma layoutu, więc pomiary rzuciłyby wyjątek udający zepsutą matematykę.
+- **Paginacja własna**, bo Chrome nie wspiera pól marginesowych `@page`, a numer strony ma być
+  w nagłówku. `PG_W/PG_H/PG_SLACK` (mm) muszą zgadzać się z `.printdoc .pg{height}` w `@media print`;
+  `271mm + 2×12mm` marginesu mieści się w 297mm A4 — przy 273mm pojawiały się puste kartki.
+- Pomiar idzie przez **sondę** `position:absolute;left:-10000px;visibility:hidden` z klasą `.printdoc`
+  (element w `display:none` ma `offsetHeight` 0, a bez klasy mierzyłby inne style). Budżet strony =
+  wysokość pustej strony odjęta od limitu — łapie też marginesy nagłówka i stopki.
+- Tabela dłuższa niż strona jest dzielona z powtórzonym nagłówkiem kolumn i dopiskiem „ciąg dalszy";
+  pojedynczy wiersz na końcu strony (sierota) jest przenoszony w całości.
+- Puste pola, zerowe stawki i sekcje bez pozycji **nie drukują się wcale**. `markZero()`/`tr.zero`
+  zostały tylko dla ekranu — wydruk filtruje pozycje sam.
+
 ### Design System (wspólny z `katalog`)
 
 Design przeniesiony 1:1 z `katalog/index.html` — te same nazwy tokenów, ta sama paleta OKLCH, te same fonty. **Zmieniając wygląd, zmieniaj oba pliki razem**; poprzedni system (Skybound: Archivo/Hanken/JetBrains, ciemny domyślnie, `--accent` = pomarańcz) został usunięty w całości.
@@ -85,15 +107,20 @@ Dwie pułapki stuba, o które łatwo się potknąć pisząc podobny test:
 - `let K` i `function recalc` żyją w zasięgu skryptu, **nie** na `globalThis` — trzeba je wystawić dopiskiem `;globalThis.__K=K;globalThis.__recalc=recalc;` do kodu podawanego do `runInContext`.
 - Stawki ustawiaj przez **DOM** (`$('s-bl').value=…`), nie przez `K.stawki` — `refreshTotals()` zaczyna od `readStawkiFromDom()` i nadpisze wartości wstrzyknięte prosto do stanu. Dodatkowo `init()` woła `writeDomFromState()`, więc zaraz po starcie w stubie siedzą domyślne stawki z `blankState()`.
 
-**Wydruk — bez okna drukowania.** W DevTools podmień media query na ekranowe i obejrzyj stronę normalnie:
+**Wydruk — bez okna drukowania.** Najpierw **zwęź okno do szerokości strony**: 186 mm ≈ 703 px przy
+96 dpi, więc viewport ~760 px. Przy szerokim oknie wszystko się mieści i nie zobaczysz przelewu kolumn —
+czyli dokładnie tej klasy błędu, przez którą powstał osobny widok wydruku. Potem:
 
 ```js
+buildPrintDoc();                        // beforeprint nie leci przy podglądzie
 for (const sh of document.styleSheets)
   for (const r of sh.cssRules)
     if (r.media && r.media.mediaText.includes('print')) r.media.mediaText = 'screen';
 ```
 
-Sprawdzaj wtedy trzy rzeczy: czy tekst jest czarny na białym (tokeny motywu są nadpisywane po nazwie — nowy token trzeba dopisać do listy w `@media print`), czy złapał się `--serif`, i czy wiersze o wartości 0 znikają (wstaw pozycję z zerową kwotą i sprawdź, że `tr.zero` ma `display:none`).
+Kontrola numeryczna zamiast oglądania: sklonuj każdą `.pg` do sondy i sprawdź, że `offsetHeight`
+nie przekracza `271mm` — przelew oznacza obcięcie treści (`overflow:hidden`), a nie widać go na
+zrzucie. Do tego: brak pustych stron, numeracja zgodna z liczbą `.pg`, sumy identyczne z ekranem.
 
 Render / picker / OTP / oba motywy — wzrokowo w przeglądarce.
 
