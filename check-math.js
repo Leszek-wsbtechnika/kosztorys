@@ -24,7 +24,9 @@ function mkEl(id) {
   return { id, value:'', textContent:'', innerHTML:'', className:'', style:{}, checked:false,
     classList:{ toggle(){}, add(){}, remove(){} },
     closest(){ return { classList:{ toggle(){} } }; },
-    appendChild(){}, setAttribute(){}, getAttribute(){ return null; } };
+    appendChild(){}, setAttribute(){}, getAttribute(){ return null; },
+    querySelectorAll(){ return []; }, querySelector(){ return null; }, children:[],
+    focus(){}, blur(){}, addEventListener(){} };
 }
 const els = {};
 const document = {

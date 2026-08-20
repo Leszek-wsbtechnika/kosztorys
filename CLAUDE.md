@@ -47,6 +47,23 @@ DOM↔stan: `readMetaFromDom`/`readStawkiFromDom` (DOM→K), `writeDomFromState`
 - **VIN**: `maxlength=17`, `vinInput()` wielkie litery (z zachowaniem pozycji kursora) i przycięcie do 17 znaków. Krótszy numer **nie jest błędem** — maszyny mają krótsze numery fabryczne — więc `vinCheck()` (na `blur`) pokazuje pytanie w `#vin-warn`, a `vinAccept()` zapisuje potwierdzenie w `K.obiekt.vinKrotki`. Każda edycja numeru kasuje flagę i pytanie wraca.
 - **Warsztat**: `K.meta.sporzTyp` (`Rzeczoznawca`/`Warsztat`) steruje widocznością bloku `#warsztat-box` (`onSporzTyp`). Dane siedzą w `K.warsztat` (część kosztorysu), a `saveWarsztat()`/`forgetWarsztat()` trzymają kopię pod **osobnym** kluczem localStorage `kosztorys_warsztat` — niezależnym od kosztorysu, więc przeżywa reset i wskakuje sama przy przełączeniu na „Warsztat" z pustymi polami.
 
+### Tabele na ekranie: zawijanie i regulowane kolumny
+
+- Kolumny tekstowe (`nrKat`, `nazwa`, `opis`) to **`<textarea class="txt">`**, nie `<input>` —
+  input nie zawija tekstu, więc długie nazwy części znikały za krawędzią kolumny. `autoGrow()`
+  ustawia wysokość na `scrollHeight+2` (globalne `box-sizing:border-box` → `scrollHeight` bez ramek),
+  `txtKey()` przechwytuje Enter (`preventDefault`+`blur`), więc **w danych nigdy nie ma `\n`** —
+  zawijanie jest wyłącznie wizualne i nie dotyka XLSX-a ani wydruku. Treść escapuje `pE()`, nie
+  `esc()`: wewnątrz `<textarea>` nieescapowany `&` rozjechałby wartość przy kolejnym renderze.
+- Po `render*()` leci **jeden** przebieg `growAll(tbody)`, nie `autoGrow()` na wiersz — inaczej
+  28 pozycji to 28 przeliczeń layoutu przy każdym `recalc()`.
+- Szerokości: `<colgroup>` + `table.tbl-fix{table-layout:fixed}` **tylko** w tabelach Części
+  i Robocizny (pozostałe dwie nie mają colgroup i przy `fixed` rozjechałyby się na równe kolumny).
+  Uchwyt `.col-grip` w `<th>`; przeciąganie zamraża kolumny w pikselach i zmienia **parę**
+  (ciągnięta +dx, sąsiednia −dx), więc suma zostaje stała. Zapis w `localStorage['kosztorys_kolumny']`
+  jako procenty — **poza `K`**, bo to preferencja urządzenia, nie dane kosztorysu (ten sam wzorzec
+  co `kosztorys_warsztat`). Niezgodna liczba kolumn w zapisie → wartości domyślne `KOL_DEF`.
+
 ### Wyliczenia (czysty JS)
 
 - część: `cenaNetto*ilosc*(1-rabat/100)*(1-potracenie/100)`
@@ -103,6 +120,8 @@ Appbar powtarza header katalogu: `--surface` + `border-left:3px solid var(--bran
 
 **Pułapka specyficzności — dwa razy już ugryzła.** Reguła pól obejmuje `.fld input,.fld select,.fld textarea` (0-1-1), więc:
 - `input[type=number]` (0-1-1, ale *później* w pliku) bije `td input` (0-0-2) — kolumny liczbowe w tabelach wymagają jawnego wypisania `td input[type=number]`, inaczej dostają tło i padding pola formularza.
+- `td textarea` (0-0-2) przegrywa z `.fld textarea` i dostaje `min-height:72px` oraz tło pola —
+  stąd selektor **`td textarea.txt`** (0-1-2).
 - skrót `background:` z tamtej reguły kasuje `background-repeat`/`background-position` strzałki `<select>` — reguły strzałki muszą mieć **tę samą** specyficzność (`select,.fld select,td select`), a tło w tabelach ustawiać przez `background-color`, nie skrót. Objaw: strzałka kafelkuje się na całym polu (widoczne tylko w jednym motywie).
 
 ## Weryfikacja
@@ -111,6 +130,8 @@ Appbar powtarza header katalogu: `--surface` + `border-left:3px solid var(--bran
 
 Dwie pułapki stuba, o które łatwo się potknąć pisząc podobny test:
 - `let K` i `function recalc` żyją w zasięgu skryptu, **nie** na `globalThis` — trzeba je wystawić dopiskiem `;globalThis.__K=K;globalThis.__recalc=recalc;` do kodu podawanego do `runInContext`.
+- Stub elementu musi mieć `querySelectorAll`, `querySelector`, `children` i `addEventListener` —
+  `growAll()`/`applyKolumny()` wołane z `render*()` i `init()` sięgają po nie na starcie.
 - Stawki ustawiaj przez **DOM** (`$('s-bl').value=…`), nie przez `K.stawki` — `refreshTotals()` zaczyna od `readStawkiFromDom()` i nadpisze wartości wstrzyknięte prosto do stanu. Dodatkowo `init()` woła `writeDomFromState()`, więc zaraz po starcie w stubie siedzą domyślne stawki z `blankState()`.
 
 **Wydruk — bez okna drukowania.** Najpierw **zwęź okno do szerokości strony**: 186 mm ≈ 703 px przy

@@ -148,12 +148,23 @@ td select{background-position:right 4px center;padding-right:18px}
 /* ===== Tabele ===== */
 .tbl-scroll{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:.88rem}
+/* tylko tabele z <colgroup> — przy table-layout:fixed tabela bez zadanych szerokości
+   rozdzieliłaby kolumny po równo i rozjechała się */
+table.tbl-fix{table-layout:fixed}
 thead th{background:var(--surface2);padding:9px 10px;text-align:left;font-family:var(--mono);font-size:.6rem;
   text-transform:uppercase;letter-spacing:.16em;color:var(--muted-lt);font-weight:400;
-  border-bottom:1px solid var(--border-bright);white-space:nowrap}
+  border-bottom:1px solid var(--border-bright);white-space:nowrap;position:relative}
+.tbl-fix thead th{overflow:hidden;text-overflow:ellipsis}
+/* uchwyt do przeciągania szerokości kolumny */
+.col-grip{position:absolute;top:0;right:-3px;width:6px;height:100%;cursor:col-resize;z-index:2;
+  user-select:none;touch-action:none}
+.col-grip::after{content:'';position:absolute;top:20%;left:2px;width:2px;height:60%;background:transparent;transition:background .15s}
+.col-grip:hover::after,.col-grip.on::after{background:var(--primary)}
 tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
 tbody tr:hover{background:var(--primary-dim)}
 tbody td{padding:4px 6px;vertical-align:middle}
+.tbl-fix tbody td{vertical-align:top}
+.tbl-fix td.lp,.tbl-fix td.val{padding-top:11px}   /* wyrównanie do pierwszej linii pola tekstowego */
 /* selektory typu (input[type=number]) mają wyższą specyficzność niż `td input` — stąd jawna lista */
 td input,td select,td input[type=text],td input[type=number],td input[type=date]{width:100%;border:1px solid transparent;
   background-color:transparent;padding:6px;border-radius:0;color:var(--text);font-size:.82rem;font-family:var(--sans)}
@@ -161,6 +172,15 @@ td input:hover,td select:hover{border-color:var(--border)}
 td input:focus,td select:focus,td input[type=number]:focus,td input[type=text]:focus{border-color:var(--primary);
   background-color:var(--surface2)}
 /* pola liczbowe w tabelach dostają ramkę — bez niej wtapiają się w wiersz i nie widać, że są edytowalne */
+/* pole tekstowe w tabeli — textarea zamiast input, bo input nie zawija długich nazw części.
+   Selektor MUSI być `td textarea.txt` (0-1-2): reguła pól formularza obejmuje `.fld textarea` (0-1-1)
+   i narzuciłaby min-height 72px oraz tło pola. Enter jest przechwytywany (txtKey), więc w danych
+   nie ma znaków nowej linii — zawijanie jest wyłącznie wizualne. */
+td textarea.txt{width:100%;display:block;resize:none;overflow:hidden;box-sizing:border-box;
+  border:1px solid transparent;background-color:transparent;border-radius:0;padding:6px;
+  color:var(--text);font-size:.82rem;font-family:var(--sans);line-height:1.35;min-height:0;outline:none}
+td textarea.txt:hover{border-color:var(--border)}
+td textarea.txt:focus{border-color:var(--primary);background-color:var(--surface2)}
 td.num input{text-align:right;font-family:var(--mono);border-color:var(--border);background-color:var(--surface2)}
 td.num input:focus{border-color:var(--primary);background-color:var(--surface3)}
 td.num input.rbg{border-color:var(--border-bright);font-weight:600}
@@ -437,12 +457,23 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono)
     <div class="doc-head"><h2>Części zamienne</h2></div>
     <div class="doc-body" style="padding:0">
       <div class="tbl-scroll">
-        <table>
+        <table class="tbl-fix" id="tab-czesci">
+          <colgroup id="cols-czesci">
+            <col style="width:3%"><col style="width:14%"><col style="width:30%"><col style="width:6%">
+            <col style="width:10%"><col style="width:7%"><col style="width:6%"><col style="width:8%">
+            <col style="width:13%"><col style="width:3%">
+          </colgroup>
           <thead><tr>
-            <th>Lp</th><th>Nr katalogowy</th><th>Nazwa części</th><th style="width:60px">Ilość</th>
-            <th style="width:110px">Cena netto (zł)</th><th style="width:70px">Rodzaj</th>
-            <th style="width:70px">Rabat %</th><th style="width:90px">Potrąc. amort. %</th>
-            <th style="width:110px">Wartość netto</th><th class="no-print" style="width:34px"></th>
+            <th>Lp<span class="col-grip"></span></th>
+            <th>Nr katalogowy<span class="col-grip"></span></th>
+            <th>Nazwa części<span class="col-grip"></span></th>
+            <th>Ilość<span class="col-grip"></span></th>
+            <th>Cena netto (zł)<span class="col-grip"></span></th>
+            <th>Rodzaj<span class="col-grip"></span></th>
+            <th>Rabat %<span class="col-grip"></span></th>
+            <th>Potrąc. amort. %<span class="col-grip"></span></th>
+            <th>Wartość netto<span class="col-grip"></span></th>
+            <th class="no-print"></th>
           </tr></thead>
           <tbody id="tb-czesci"></tbody>
         </table>
@@ -451,6 +482,7 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono)
         <button class="addbtn" onclick="openEntry()">＋ Dodaj pozycję</button>
         <button class="addbtn" onclick="addCzesc()">pusty wiersz</button>
         <button class="addbtn cat" onclick="openPicker()">📥 Dodaj z katalogu</button>
+        <button class="addbtn" onclick="resetKolumny('czesci')" title="Przywróć domyślne szerokości kolumn">⇔ Reset kolumn</button>
       </div>
       <div class="subtotal">Razem części (netto, po rabatach i potrąceniach): <span id="st-czesci">0,00 zł</span></div>
     </div>
@@ -461,18 +493,27 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono)
     <div class="doc-head"><h2>Robocizna naprawcza</h2></div>
     <div class="doc-body" style="padding:0">
       <div class="tbl-scroll">
-        <table>
+        <table class="tbl-fix" id="tab-robocizna">
+          <colgroup id="cols-robocizna">
+            <col style="width:3%"><col style="width:42%"><col style="width:12%"><col style="width:9%">
+            <col style="width:9%"><col style="width:10%"><col style="width:12%"><col style="width:3%">
+          </colgroup>
           <thead><tr>
-            <th>Lp</th><th>Opis operacji</th><th style="width:130px">Kategoria</th>
-            <th style="width:90px">Rodzaj</th><th style="width:90px">Czas (rbg)</th>
-            <th style="width:100px">Stawka (zł)</th><th style="width:110px">Wartość</th>
-            <th class="no-print" style="width:34px"></th>
+            <th>Lp<span class="col-grip"></span></th>
+            <th>Opis operacji<span class="col-grip"></span></th>
+            <th>Kategoria<span class="col-grip"></span></th>
+            <th>Rodzaj<span class="col-grip"></span></th>
+            <th>Czas (rbg)<span class="col-grip"></span></th>
+            <th>Stawka (zł)<span class="col-grip"></span></th>
+            <th>Wartość<span class="col-grip"></span></th>
+            <th class="no-print"></th>
           </tr></thead>
           <tbody id="tb-robocizna"></tbody>
         </table>
       </div>
       <div class="tfoot-add"><button class="addbtn" onclick="openEntry()">＋ Dodaj pozycję</button>
-        <button class="addbtn" onclick="addRobocizna()">pusty wiersz</button></div>
+        <button class="addbtn" onclick="addRobocizna()">pusty wiersz</button>
+        <button class="addbtn" onclick="resetKolumny('robocizna')" title="Przywróć domyślne szerokości kolumn">⇔ Reset kolumn</button></div>
       <div class="subtotal">Razem robocizna naprawcza: <span id="st-robocizna">0,00 zł</span></div>
     </div>
   </div>
@@ -713,8 +754,10 @@ function renderCzesci(){
     const tr=document.createElement('tr');
     tr.innerHTML=`
       <td class="lp">${i+1}</td>
-      <td><input value="${esc(r.nrKat)}" oninput="upd('czesci',${r.id},'nrKat',this.value)"></td>
-      <td><input value="${esc(r.nazwa)}" oninput="upd('czesci',${r.id},'nazwa',this.value)"></td>
+      <td><textarea class="txt" rows="1" onkeydown="txtKey(event)"
+            oninput="upd('czesci',${r.id},'nrKat',this.value);autoGrow(this)">${pE(r.nrKat)}</textarea></td>
+      <td><textarea class="txt" rows="1" onkeydown="txtKey(event)"
+            oninput="upd('czesci',${r.id},'nazwa',this.value);autoGrow(this)">${pE(r.nazwa)}</textarea></td>
       <td class="num"><input type="number" min="0" step="1" value="${r.ilosc}" oninput="upd('czesci',${r.id},'ilosc',this.value,true)"></td>
       <td class="num"><input type="number" min="0" step="0.01" value="${r.cenaNetto}" oninput="upd('czesci',${r.id},'cenaNetto',this.value,true)"></td>
       <td><select onchange="upd('czesci',${r.id},'rodzaj',this.value)">${opt(['O','Q','P','Z'],r.rodzaj)}</select></td>
@@ -724,6 +767,7 @@ function renderCzesci(){
       <td class="no-print"><button class="rowdel" onclick="del('czesci',${r.id})">×</button></td>`;
     tb.appendChild(tr);
   });
+  growAll(tb);   // jeden przebieg po dołożeniu wierszy, nie po jednym na wiersz
 }
 function renderRobocizna(){
   const tb=$('tb-robocizna'); tb.innerHTML='';
@@ -731,7 +775,8 @@ function renderRobocizna(){
     const tr=document.createElement('tr');
     tr.innerHTML=`
       <td class="lp">${i+1}</td>
-      <td><input value="${esc(r.opis)}" oninput="upd('robocizna',${r.id},'opis',this.value)"></td>
+      <td><textarea class="txt" rows="1" onkeydown="txtKey(event)"
+            oninput="upd('robocizna',${r.id},'opis',this.value);autoGrow(this)">${pE(r.opis)}</textarea></td>
       <td><select onchange="upd('robocizna',${r.id},'kategoria',this.value)">${opt(['BL','MECH','EL','DEM-MONT'],r.kategoria)}</select></td>
       <td><select onchange="upd('robocizna',${r.id},'rodzaj',this.value)">${opt(['W','N','Wym/Zam'],r.rodzaj)}</select></td>
       <td class="num"><input class="rbg" type="number" min="0" step="0.1" value="${r.czasRbg}" oninput="upd('robocizna',${r.id},'czasRbg',this.value,true)"></td>
@@ -740,6 +785,7 @@ function renderRobocizna(){
       <td class="no-print"><button class="rowdel" onclick="del('robocizna',${r.id})">×</button></td>`;
     tb.appendChild(tr);
   });
+  growAll(tb);
 }
 function renderLakier(){
   const tb=$('tb-lakier'); tb.innerHTML='';
@@ -959,6 +1005,86 @@ function importJsonFile(ev){
 }
 
 /* ================= XLSX eksport ================= */
+/* ================= Pola tekstowe w tabelach =================
+   Kolumny tekstowe używają <textarea>, bo <input> nie zawija tekstu — długie nazwy części
+   znikały za krawędzią kolumny. Enter kończy edycję zamiast wstawiać nową linię, więc w danych
+   nie ma znaków `\n`, a zawijanie jest wyłącznie wizualne (XLSX i wydruk bez zmian). */
+function autoGrow(el){
+  if(!el) return;
+  el.style.height='auto';
+  el.style.height=(el.scrollHeight+2)+'px';   // +2: box-sizing:border-box → scrollHeight bez ramek
+}
+function growAll(root){ (root||document).querySelectorAll('textarea.txt').forEach(autoGrow); }
+function txtKey(e){ if(e.key==='Enter'){ e.preventDefault(); e.target.blur(); } }
+
+/* ================= Regulowane szerokości kolumn =================
+   Szerokości to preferencja pracy, nie dane kosztorysu — trzymamy je pod osobnym kluczem
+   localStorage (jak kosztorys_warsztat), więc nie wędrują w eksporcie JSON. */
+const KOL_KEY='kosztorys_kolumny';
+const KOL_DEF={ czesci:[3,14,30,6,10,7,6,8,13,3], robocizna:[3,42,12,9,9,10,12,3] };
+const KOL_MIN=40;   // px — poniżej tego kolumna przestaje być czytelna
+
+function kolCols(tab){ const g=$('cols-'+tab); return g? [...g.children] : []; }
+function loadKolumny(){ try{ return JSON.parse(localStorage.getItem(KOL_KEY)||'null')||{}; }catch(e){ return {}; } }
+function saveKolumny(tab){
+  const proc=kolCols(tab).map(c=>Math.round(parseFloat(c.style.width)*100)/100);
+  const all=loadKolumny(); all[tab]=proc;
+  try{ localStorage.setItem(KOL_KEY,JSON.stringify(all)); }catch(e){}
+}
+function applyKolumny(){
+  const zap=loadKolumny();
+  Object.keys(KOL_DEF).forEach(tab=>{
+    const cols=kolCols(tab), w=zap[tab];
+    const src=(Array.isArray(w) && w.length===cols.length) ? w : KOL_DEF[tab];   // niezgodna liczba → domyślne
+    cols.forEach((c,i)=>{ c.style.width=src[i]+'%'; });
+  });
+}
+function resetKolumny(tab){
+  kolCols(tab).forEach((c,i)=>{ c.style.width=KOL_DEF[tab][i]+'%'; });
+  const all=loadKolumny(); delete all[tab];
+  try{ localStorage.setItem(KOL_KEY,JSON.stringify(all)); }catch(e){}
+  growAll($('tab-'+tab));
+  toast('Szerokości kolumn przywrócone');
+}
+
+/* Przeciąganie: na starcie zamrażamy wszystkie kolumny w pikselach, potem zmieniamy PARĘ
+   (ciągnięta +dx, sąsiednia −dx) — suma zostaje stała, więc tabela nie skacze. */
+function initColResize(){
+  document.querySelectorAll('.tbl-fix').forEach(tab=>{
+    const nazwa=tab.id.replace('tab-','');
+    [...tab.querySelectorAll('th .col-grip')].forEach((grip,idx)=>{
+      grip.addEventListener('pointerdown',e=>{
+        const cols=kolCols(nazwa); if(idx>=cols.length-1) return;
+        e.preventDefault();
+        const total=tab.offsetWidth;
+        const px=[...tab.querySelectorAll('thead th')].map(th=>th.offsetWidth);
+        cols.forEach((c,i)=>{ c.style.width=px[i]+'px'; });
+        const startX=e.clientX, wA=px[idx], wB=px[idx+1];
+        grip.classList.add('on'); grip.setPointerCapture(e.pointerId);
+        const move=ev=>{
+          let dx=ev.clientX-startX;
+          dx=Math.max(dx, KOL_MIN-wA);      // nie zwężaj ciągniętej poniżej minimum
+          dx=Math.min(dx, wB-KOL_MIN);      // ani sąsiedniej
+          cols[idx].style.width=(wA+dx)+'px';
+          cols[idx+1].style.width=(wB-dx)+'px';
+        };
+        const up=ev=>{
+          grip.classList.remove('on');
+          grip.removeEventListener('pointermove',move);
+          grip.removeEventListener('pointerup',up);
+          grip.removeEventListener('pointercancel',up);
+          cols.forEach(c=>{ c.style.width=(parseFloat(c.style.width)/total*100)+'%'; });
+          saveKolumny(nazwa);
+          growAll(tab);                     // węższa kolumna = więcej linii w polach
+        };
+        grip.addEventListener('pointermove',move);
+        grip.addEventListener('pointerup',up);
+        grip.addEventListener('pointercancel',up);
+      });
+    });
+  });
+}
+
 /* ================= Wydruk =================
    Wydruk to OSOBNY dokument budowany z K, nie ekran przemalowany na biało.
    Formularz drukowany wprost ucinał nazwy części i całą kolumnę wartości, bo <input>
@@ -1305,6 +1431,7 @@ function pickPart(id){
 async function init(){
   applyTheme(localStorage.getItem(THEME_KEY)||'light');   // domyślnie jasny — jak katalog
   loadPersist();
+  applyKolumny(); initColResize();
   writeDomFromState();
   recalc();
   if(K.czesci.length===0 && K.robocizna.length===0 && K.lakier.length===0) addCzesc();
