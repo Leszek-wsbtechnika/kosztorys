@@ -200,6 +200,13 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono)
 .warsztat-box{display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
 .warsztat-box.on{display:grid}
 .warsztat-act{display:flex;flex-direction:row;align-items:flex-end;gap:8px}
+.rowmove{background:none;border:none;color:var(--muted-lt);font-family:var(--mono);font-size:.95rem;line-height:1;
+  padding:2px 5px;transition:color .15s}
+.rowmove:hover{color:var(--primary)}
+/* .chk to <label>, więc dziedziczy mono+wersaliki z reguły etykiet formularza — kasujemy jawnie */
+.chk{display:flex;align-items:center;gap:9px;font-size:.88rem;color:var(--text);padding:7px 0;cursor:pointer;
+  font-family:var(--sans);text-transform:none;letter-spacing:0;margin:0}
+.chk input{width:16px;height:16px;accent-color:var(--primary);cursor:pointer}
 .rowdel{background:none;border:none;color:var(--muted-lt);font-family:var(--mono);font-size:1rem;line-height:1;
   padding:2px 6px;transition:color .15s}
 .rowdel:hover{color:var(--danger)}
@@ -459,9 +466,9 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono)
       <div class="tbl-scroll">
         <table class="tbl-fix" id="tab-czesci">
           <colgroup id="cols-czesci">
-            <col style="width:3%"><col style="width:14%"><col style="width:30%"><col style="width:6%">
+            <col style="width:3%"><col style="width:14%"><col style="width:27%"><col style="width:6%">
             <col style="width:10%"><col style="width:7%"><col style="width:6%"><col style="width:8%">
-            <col style="width:13%"><col style="width:3%">
+            <col style="width:13%"><col style="width:6%">
           </colgroup>
           <thead><tr>
             <th>Lp<span class="col-grip"></span></th>
@@ -614,6 +621,24 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono)
 </div>
 
 <!-- ============ MODAL: pełna pozycja (część + robocizna + lakier) ============ -->
+<!-- ============ MODAL: przenieś nazwę części do robocizny / lakierowania ============ -->
+<div class="overlay" id="ov-move">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-head"><h3>Przenieś pozycję</h3><button class="x" onclick="closeOverlay('ov-move')">×</button></div>
+    <div class="modal-body">
+      <p class="hint" id="move-nazwa"></p>
+      <label class="chk"><input type="checkbox" id="move-rob" checked> Robocizna naprawcza</label>
+      <label class="chk"><input type="checkbox" id="move-lak"> Lakierowanie</label>
+      <p class="hint">Czas (rbg) zostaje pusty — uzupełnisz go w docelowej tabeli.</p>
+      <div class="msg" id="move-msg"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+        <button class="tbtn" onclick="closeOverlay('ov-move')">Anuluj</button>
+        <button class="tbtn primary" onclick="submitMove()">Przenieś</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="ov-entry">
   <div class="modal" style="max-width:560px">
     <div class="modal-head"><h3>Dodaj pozycję</h3><button class="x" onclick="closeOverlay('ov-entry')">×</button></div>
@@ -764,7 +789,8 @@ function renderCzesci(){
       <td class="num"><input type="number" min="0" step="1" value="${r.rabat}" oninput="upd('czesci',${r.id},'rabat',this.value,true)"></td>
       <td class="num"><input type="number" min="0" step="1" value="${r.potracenie}" oninput="upd('czesci',${r.id},'potracenie',this.value,true)"></td>
       <td class="val" id="vc-${r.id}">${zl(valCzesc(r))}</td>
-      <td class="no-print"><button class="rowdel" onclick="del('czesci',${r.id})">×</button></td>`;
+      <td class="no-print"><button class="rowmove" onclick="openMove(${r.id})"
+            title="Przenieś nazwę do robocizny / lakierowania">→</button><button class="rowdel" onclick="del('czesci',${r.id})">×</button></td>`;
     tb.appendChild(tr);
   });
   growAll(tb);   // jeden przebieg po dołożeniu wierszy, nie po jednym na wiersz
@@ -955,7 +981,7 @@ function writeDomFromState(){
   $('m-ubez').value=m.ubez; $('m-szkoda').value=m.szkoda; $('m-polisa').value=m.polisa;
   $('m-sporz-typ').value=m.sporzTyp||'Rzeczoznawca';
   $('w-nazwa').value=(K.warsztat&&K.warsztat.nazwa)||''; $('w-adres').value=(K.warsztat&&K.warsztat.adres)||'';
-  onSporzTyp(false); vinCheck();
+  onSporzTyp(false);
   $('o-typ').value=o.typ; $('o-marka').value=o.marka; $('o-model').value=o.model; $('o-vin').value=o.vin;
   $('o-rej').value=o.rej; $('o-rok').value=o.rok; $('o-przebieg').value=o.przebieg; $('o-data1').value=o.data1;
   $('s-bl').value=s.bl; $('s-mech').value=s.mech; $('s-lak').value=s.lak; $('s-matlak').value=s.matlak;
@@ -963,6 +989,7 @@ function writeDomFromState(){
   $('s-amort').value=s.amort; $('s-vat').value=s.vat;
   $('s-ubytek').value=s.ubytek; $('s-udzial').value=s.udzial;
   $('m-uwagi').value=K.uwagi||''; $('m-podpis1').value=K.podpis1||''; $('m-podpis2').value=K.podpis2||'';
+  vinCheck();   // dopiero po wpisaniu VIN-u — wcześniej sprawdzałby wartość poprzedniego kosztorysu
 }
 
 /* ================= Persystencja localStorage ================= */
@@ -1021,7 +1048,7 @@ function txtKey(e){ if(e.key==='Enter'){ e.preventDefault(); e.target.blur(); } 
    Szerokości to preferencja pracy, nie dane kosztorysu — trzymamy je pod osobnym kluczem
    localStorage (jak kosztorys_warsztat), więc nie wędrują w eksporcie JSON. */
 const KOL_KEY='kosztorys_kolumny';
-const KOL_DEF={ czesci:[3,14,30,6,10,7,6,8,13,3], robocizna:[3,42,12,9,9,10,12,3] };
+const KOL_DEF={ czesci:[3,14,27,6,10,7,6,8,13,6], robocizna:[3,42,12,9,9,10,12,3] };
 const KOL_MIN=40;   // px — poniżej tego kolumna przestaje być czytelna
 
 function kolCols(tab){ const g=$('cols-'+tab); return g? [...g.children] : []; }
@@ -1425,6 +1452,51 @@ function pickPart(id){
   K.robocizna.push({ id:uid(), opis:p.name, kategoria:'BL', rodzaj:'W', czasRbg:'' });
   recalc(); persist();
   toast(`Dodano: ${p.name}`,'ok',1500);
+}
+
+/* ================= Przeniesienie nazwy części do innych sekcji =================
+   Ta sama pozycja bywa w kosztorysie trzy razy (część, robocizna, lakier). Przycisk „→"
+   w wierszu części dokłada wiersze o tej samej nazwie, żeby nie przepisywać jej ręcznie.
+   Kształt wierszy jest ten sam co w pickPart() i submitEntry() — czas zostaje pusty,
+   więc pozycja jest wyszarzona (tr.zero) i nie trafia na wydruk, dopóki go nie uzupełnisz. */
+let _moveId=null;
+function openMove(id){
+  const r=K.czesci.find(x=>x.id===id); if(!r) return;
+  const nazwa=String(r.nazwa||'').trim();
+  if(!nazwa){ toast('Najpierw wpisz nazwę części','error'); return; }
+  _moveId=id;
+  $('move-nazwa').textContent='Pozycja: '+nazwa;
+  $('move-rob').checked=true; $('move-lak').checked=false;
+  $('move-msg').className='msg';
+  $('ov-move').classList.add('on');
+}
+function jestJuz(lista,pole,nazwa){
+  const n=nazwa.trim().toLowerCase();
+  return lista.some(r=>String(r[pole]||'').trim().toLowerCase()===n);
+}
+function submitMove(){
+  const r=K.czesci.find(x=>x.id===_moveId); if(!r) return closeOverlay('ov-move');
+  const nazwa=String(r.nazwa||'').trim();
+  const chceRob=$('move-rob').checked, chceLak=$('move-lak').checked;
+  const msg=$('move-msg');
+  if(!chceRob && !chceLak){ msg.textContent='Zaznacz przynajmniej jedną sekcję.'; msg.className='msg show error'; return; }
+
+  const dodane=[], pominiete=[];
+  if(chceRob){
+    if(jestJuz(K.robocizna,'opis',nazwa)) pominiete.push('robocizna');
+    else { K.robocizna.push({ id:uid(), opis:nazwa, kategoria:'BL', rodzaj:'W', czasRbg:'' }); dodane.push('robocizna'); }
+  }
+  if(chceLak){
+    if(jestJuz(K.lakier,'element',nazwa)) pominiete.push('lakierowanie');
+    else { K.lakier.push({ id:uid(), element:nazwa, m2:0, czasRbg:'', matKwota:0 }); dodane.push('lakierowanie'); }
+  }
+  if(!dodane.length){
+    msg.textContent='Ta pozycja jest już w: '+pominiete.join(' i ')+'.';
+    msg.className='msg show error'; return;      // modal zostaje otwarty
+  }
+  recalc(); persist(); closeOverlay('ov-move');
+  const ogon = pominiete.length ? ` (pominięto: ${pominiete.join(', ')})` : '';
+  toast(`Dodano do: ${dodane.join(', ')} — uzupełnij czas (rbg)${ogon}`,'ok',3200);
 }
 
 /* ================= Init ================= */

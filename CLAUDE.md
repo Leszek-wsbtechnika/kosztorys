@@ -79,6 +79,16 @@ DOM↔stan: `readMetaFromDom`/`readStawkiFromDom` (DOM→K), `writeDomFromState`
 
 Jedno okno → fan-out do trzech bloków wg wypełnionych pól: cena lub nr katalogowy → `czesci`; robocizna naprawcza >0 → `robocizna`; robocizna lakiernicza >0 → `lakier`. Wspólna `nazwa`. Otwierane przyciskiem „＋ Dodaj pozycję" w blokach Części i Robocizna (obok „pusty wiersz" i pickera).
 
+### Przycisk „→" w wierszu części (`openMove`/`submitMove`)
+
+Ta sama pozycja bywa w kosztorysie trzy razy (część + robocizna + lakier). Przycisk „→" obok „×"
+otwiera `#ov-move` z dwoma checkboxami i dokłada wiersze o tej samej nazwie — kształt wierszy
+przepisany z `pickPart()` i `submitEntry()`, żeby istniały trzy ścieżki dodawania, a nie trzy
+definicje wiersza. **Czas (rbg) zostaje pusty**: wiersz ma wartość 0, więc jest wyszarzony
+(`tr.zero`) i nie trafia na wydruk, dopóki użytkownik go nie uzupełni — toast mówi to wprost.
+Duplikaty wykrywane po `trim().toLowerCase()`; gdy nic nie zostaje do dodania, modal nie zamyka się
+i pokazuje, co pominął. Kolumna akcji w tabeli części ma przez to 6% (`KOL_DEF.czesci`), nie 3%.
+
 ### Wydruk — osobny dokument, nie przemalowany ekran
 
 `buildPrintDoc()` renderuje `#printdoc` z `K`: statyczne `<table>`/`<div>`, **zero `<input>`**.
