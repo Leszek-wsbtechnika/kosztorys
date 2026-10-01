@@ -143,7 +143,12 @@ select,.fld select{padding-right:28px}
 td select{background-position:right 4px center;padding-right:18px}
 [data-theme="dark"] select,[data-theme="dark"] .fld select,[data-theme="dark"] td select{
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23a08060'/%3E%3C/svg%3E")}
-.stawki .fld input{text-align:right;font-family:var(--display);font-size:.85rem}
+/* Liczby idą Interem z tabular-nums: w Orbitronie „1111" mierzy 62,6 px, a „0000" 133,5 px,
+   więc kwoty w kolumnie nigdy nie stały przecinek pod przecinkiem. Orbitron zostaje w marce,
+   nagłówkach i przyciskach. Inter z Google Fonts ma wagi 400/600 — stąd jawne 600 zamiast 700. */
+.num-font{font-family:var(--sans);font-variant-numeric:tabular-nums}
+.stawki .fld input{text-align:right;font-family:var(--sans);font-variant-numeric:tabular-nums;
+  font-weight:600;font-size:.85rem}
 
 /* ===== Tabele ===== */
 .tbl-scroll{overflow-x:auto}
@@ -181,12 +186,16 @@ td textarea.txt{width:100%;display:block;resize:none;overflow:hidden;box-sizing:
   color:var(--text);font-size:.82rem;font-family:var(--sans);line-height:1.35;min-height:0;outline:none}
 td textarea.txt:hover{border-color:var(--border)}
 td textarea.txt:focus{border-color:var(--primary);background-color:var(--surface2)}
-td.num input{text-align:right;font-family:var(--mono);border-color:var(--border);background-color:var(--surface2)}
+td.num input{text-align:right;font-family:var(--sans);font-variant-numeric:tabular-nums;font-weight:500;
+  border-color:var(--border);background-color:var(--surface2)}
 td.num input:focus{border-color:var(--primary);background-color:var(--surface3)}
 td.num input.rbg{border-color:var(--border-bright);font-weight:600}
-td.val{text-align:right;font-family:var(--display);font-weight:700;font-size:.8rem;color:var(--primary);white-space:nowrap}
-td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono);font-size:.72rem}
-.auto-mat{font-family:var(--mono);font-size:.62rem;color:var(--primary);text-align:right;margin-top:2px;white-space:nowrap}
+td.val{text-align:right;font-family:var(--sans);font-variant-numeric:tabular-nums;font-weight:600;
+  font-size:.85rem;color:var(--primary);white-space:nowrap}
+td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--sans);
+  font-variant-numeric:tabular-nums;font-size:.75rem}
+.auto-mat{font-family:var(--sans);font-variant-numeric:tabular-nums;font-size:.66rem;color:var(--primary);
+  text-align:right;margin-top:2px;white-space:nowrap}
 /* ostrzeżenie pod polem (VIN krótszy niż 17 znaków) */
 .fld-warn{display:none;font-family:var(--mono);font-size:.62rem;line-height:1.5;color:var(--danger);
   background:var(--danger-dim);border:1px solid var(--danger);padding:6px 8px;margin-top:4px;
@@ -219,7 +228,7 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono)
 .addbtn.cat:hover{background:var(--accent-dim);color:var(--accent);border-color:var(--accent)}
 .subtotal{text-align:right;padding:11px 16px;background:var(--surface2);border-top:1px solid var(--border-bright);
   font-family:var(--mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.14em;color:var(--muted-lt)}
-.subtotal span{font-family:var(--display);font-size:1.05rem;font-weight:700;color:var(--primary);
+.subtotal span{font-family:var(--sans);font-variant-numeric:tabular-nums;font-size:1.1rem;font-weight:600;color:var(--primary);
   letter-spacing:0;text-transform:none;margin-left:10px}
 
 /* ===== Podsumowanie ===== */
@@ -229,7 +238,7 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono)
 .sumrow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:9px 14px;
   border-bottom:1px solid var(--border);font-size:.82rem}
 .sumrow .lbl{font-family:var(--mono);font-size:.65rem;color:var(--muted-lt);text-transform:uppercase;letter-spacing:.1em}
-.sumrow .amt{font-family:var(--display);font-weight:700;color:var(--text);white-space:nowrap}
+.sumrow .amt{font-family:var(--sans);font-variant-numeric:tabular-nums;font-weight:600;color:var(--text);white-space:nowrap}
 .sumrow.net{background:var(--surface2)}
 .sumrow.net .amt{font-size:1rem;color:var(--text)}
 .sumrow.gross{background:var(--primary)}
@@ -265,11 +274,17 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono)
 .pick{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer;
   transition:background .1s}
 .pick:hover{background:var(--primary-dim)}
+/* pozycja już obecna w kosztorysie — zieleń to w tym projekcie kolor potwierdzenia */
+.pick.in{background:var(--accent-dim);border-left:3px solid var(--accent);cursor:default}
+.pick.in:hover{background:var(--accent-dim)}
+.pick-badge{font-family:var(--mono);font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);white-space:nowrap;flex:0 0 auto}
 .pick img{width:44px;height:44px;object-fit:cover;background:var(--surface2);border:1px solid var(--border);flex:0 0 auto}
 .pick .nfo{flex:1;min-width:0}
 .pick .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
 .pick .meta{font-family:var(--mono);font-size:.65rem;color:var(--text-dim);letter-spacing:.08em}
-.pick .pr{font-family:var(--display);font-weight:700;font-size:.9rem;color:var(--primary);white-space:nowrap}
+.pick .pr{font-family:var(--sans);font-variant-numeric:tabular-nums;font-weight:600;font-size:.95rem;
+  color:var(--primary);white-space:nowrap}
 .msg{padding:10px 12px;font-family:var(--mono);font-size:.72rem;margin-top:8px;display:none}
 .msg.show{display:block}
 .msg.error{background:var(--danger-dim);color:var(--danger);border:1px solid var(--danger)}
@@ -406,6 +421,9 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--mono)
       <!-- widoczne tylko dla rodzaju „Warsztat"; dane można zapamiętać między kosztorysami -->
       <div class="grid g3 warsztat-box" id="warsztat-box">
         <div class="fld"><label>Nazwa warsztatu</label><input id="w-nazwa" oninput="touch()"></div>
+        <div class="fld"><label>NIP warsztatu</label>
+          <input id="w-nip" inputmode="numeric" placeholder="10 cyfr" oninput="nipInput(this)" onblur="nipCheck()">
+          <div class="fld-warn no-print" id="nip-warn"></div></div>
         <div class="fld"><label>Adres warsztatu</label><input id="w-adres" placeholder="ulica, kod, miejscowość" oninput="touch()"></div>
         <div class="fld warsztat-act no-print">
           <button class="tbtn" onclick="saveWarsztat()" title="Zapisz dane warsztatu na tym urządzeniu">💾 Zapamiętaj</button>
@@ -699,7 +717,7 @@ function blankState(){
       zlec:'', ubez:'', szkoda:'', polisa:'' },
     // vinKrotki = użytkownik potwierdził, że numer jest krótszy niż 17 znaków (maszyna, nie pojazd drogowy)
     obiekt:{ typ:'Naczepa', marka:'', model:'', vin:'', vinKrotki:false, rej:'', rok:'', przebieg:'', data1:'' },
-    warsztat:{ nazwa:'', adres:'' },
+    warsztat:{ nazwa:'', adres:'', nip:'' },
     stawki:{ bl:120, mech:120, lak:130, matlak:40, normalia:2, rabat:0, amort:0, vat:23, ubytek:0, udzial:0 },
     czesci:[], robocizna:[], lakier:[], matdod:[],
     uwagi:'', podpis1:'', podpis2:'', podstawa:'brutto'
@@ -742,6 +760,36 @@ function vinWarn(on,len){
 }
 function vinAccept(){ K.obiekt.vinKrotki=true; vinWarn(false); persist(); }
 
+/* ================= NIP =================
+   Walidacja nieblokująca, jak przy VIN-ie: w stanie trzymamy same cyfry, w polu i na wydruku
+   pokazujemy je z myślnikami, a błąd sumy kontrolnej to ostrzeżenie, nie zakaz zapisu. */
+function nipDigits(v){ return String(v||'').replace(/\D/g,'').slice(0,10); }
+function nipFmt(v){ const d=nipDigits(v);
+  return d.length===10 ? `${d.slice(0,3)}-${d.slice(3,6)}-${d.slice(6,8)}-${d.slice(8)}` : d; }
+function nipValid(v){ const d=nipDigits(v); if(d.length!==10) return false;
+  const w=[6,5,7,2,3,4,5,6,7];
+  const suma=w.reduce((s,wg,i)=>s+wg*(+d[i]),0)%11;
+  return suma!==10 && suma===(+d[9]);   // reszta 10 → numer nieprawidłowy z definicji
+}
+function nipInput(el){
+  const d=nipDigits(el.value);
+  if(el.value!==d) el.value=d;          // formatujemy dopiero na blur, żeby kursor nie skakał
+  nipWarn(false); touch();
+}
+function nipCheck(){
+  const el=$('w-nip'); if(!el) return;
+  const d=nipDigits(el.value);
+  el.value=nipFmt(d);
+  nipWarn(d.length>0 && !nipValid(d), d.length);
+}
+function nipWarn(on,len){
+  const w=$('nip-warn'); if(!w) return;
+  w.className='fld-warn no-print'+(on?' on':'');
+  w.innerHTML = on
+    ? `<span>${len===10 ? 'Suma kontrolna NIP się nie zgadza — sprawdź numer.' : `NIP ma 10 cyfr, wpisano ${len}.`}</span>`
+    : '';
+}
+
 /* ================= Warsztat =================
    Dane warsztatu żyją w kosztorysie (K.warsztat), ale można je zapamiętać na urządzeniu
    pod osobnym kluczem — wtedy wskakują same do każdego nowego kosztorysu. */
@@ -749,16 +797,17 @@ const WARSZTAT_KEY='kosztorys_warsztat';
 function onSporzTyp(fromUser){
   const warsztat=$('m-sporz-typ').value==='Warsztat';
   $('warsztat-box').classList.toggle('on',warsztat);
-  if(warsztat && fromUser && !$('w-nazwa').value && !$('w-adres').value){
+  if(warsztat && fromUser && !$('w-nazwa').value && !$('w-adres').value && !$('w-nip').value){
     const zap=loadWarsztat();
-    if(zap){ $('w-nazwa').value=zap.nazwa||''; $('w-adres').value=zap.adres||''; toast('Wczytano zapamiętany warsztat'); }
+    if(zap){ $('w-nazwa').value=zap.nazwa||''; $('w-adres').value=zap.adres||'';
+      $('w-nip').value=nipFmt(zap.nip||''); nipCheck(); toast('Wczytano zapamiętany warsztat'); }
   }
   if(fromUser) touch();
 }
 function loadWarsztat(){ try{ return JSON.parse(localStorage.getItem(WARSZTAT_KEY)||'null'); }catch(e){ return null; } }
 function saveWarsztat(){
   readMetaFromDom();
-  if(!K.warsztat.nazwa && !K.warsztat.adres){ toast('Najpierw wpisz nazwę lub adres','error'); return; }
+  if(!K.warsztat.nazwa && !K.warsztat.adres && !K.warsztat.nip){ toast('Najpierw wpisz nazwę, adres lub NIP','error'); return; }
   try{ localStorage.setItem(WARSZTAT_KEY,JSON.stringify(K.warsztat)); toast('Warsztat zapamiętany','ok'); }
   catch(e){ toast('Nie udało się zapisać','error'); }
 }
@@ -966,7 +1015,7 @@ function readMetaFromDom(){
   const vinKrotki=K.obiekt.vinKrotki;   // flaga nie ma pola w DOM — przenosimy ją ręcznie
   K.obiekt={ typ:$('o-typ').value, marka:$('o-marka').value, model:$('o-model').value, vin:$('o-vin').value,
     vinKrotki, rej:$('o-rej').value, rok:$('o-rok').value, przebieg:$('o-przebieg').value, data1:$('o-data1').value };
-  K.warsztat={ nazwa:$('w-nazwa').value, adres:$('w-adres').value };
+  K.warsztat={ nazwa:$('w-nazwa').value, adres:$('w-adres').value, nip:nipDigits($('w-nip').value) };
   K.uwagi=$('m-uwagi').value; K.podpis1=$('m-podpis1').value; K.podpis2=$('m-podpis2').value;
 }
 function readStawkiFromDom(){
@@ -981,6 +1030,7 @@ function writeDomFromState(){
   $('m-ubez').value=m.ubez; $('m-szkoda').value=m.szkoda; $('m-polisa').value=m.polisa;
   $('m-sporz-typ').value=m.sporzTyp||'Rzeczoznawca';
   $('w-nazwa').value=(K.warsztat&&K.warsztat.nazwa)||''; $('w-adres').value=(K.warsztat&&K.warsztat.adres)||'';
+  $('w-nip').value=nipFmt((K.warsztat&&K.warsztat.nip)||'');
   onSporzTyp(false);
   $('o-typ').value=o.typ; $('o-marka').value=o.marka; $('o-model').value=o.model; $('o-vin').value=o.vin;
   $('o-rej').value=o.rej; $('o-rok').value=o.rok; $('o-przebieg').value=o.przebieg; $('o-data1').value=o.data1;
@@ -989,7 +1039,7 @@ function writeDomFromState(){
   $('s-amort').value=s.amort; $('s-vat').value=s.vat;
   $('s-ubytek').value=s.ubytek; $('s-udzial').value=s.udzial;
   $('m-uwagi').value=K.uwagi||''; $('m-podpis1').value=K.podpis1||''; $('m-podpis2').value=K.podpis2||'';
-  vinCheck();   // dopiero po wpisaniu VIN-u — wcześniej sprawdzałby wartość poprzedniego kosztorysu
+  vinCheck(); nipCheck();   // dopiero po wpisaniu wartości — wcześniej sprawdzałyby dane poprzedniego kosztorysu
 }
 
 /* ================= Persystencja localStorage ================= */
@@ -1162,7 +1212,7 @@ function printBlocks(t){
   let nr=0;   // numeracja sekcji liczona, nie wpisana — pominięta sekcja nie robi dziury
   const c1=[pF('Zleceniodawca',m.zlec),pF('Ubezpieczyciel',m.ubez),pF('Nr szkody',m.szkoda),pF('Nr polisy',m.polisa)].join('');
   const c2=[pF('Sporządzający',m.sporz),pF('Rodzaj',m.sporzTyp),
-            pF('Warsztat',warsztat?w.nazwa:''),pF('Adres',warsztat?w.adres:''),
+            pF('Warsztat',warsztat?w.nazwa:''),pF('NIP',warsztat?nipFmt(w.nip):''),pF('Adres',warsztat?w.adres:''),
             pF('Data kosztorysu',pDate(m.data))].join('');
   if(c1||c2) B.push({html:`<div class="p-sec"><h3>${++nr} · Dane kosztorysu</h3><div class="p-grid"><div>${c1}</div><div>${c2}</div></div></div>`});
 
@@ -1308,6 +1358,9 @@ function exportXlsx(){
   rows.push(['KOSZTORYS NAPRAWY']);
   rows.push(['Nr',K.meta.nr,'Data',K.meta.data]);
   rows.push(['Sporządzający',K.meta.sporz,'Zleceniodawca',K.meta.zlec]);
+  // NIP z myślnikami → Excel trzyma go jako tekst; surowe cyfry zjadłyby wiodące zero
+  if(K.meta.sporzTyp==='Warsztat')
+    rows.push(['Warsztat',K.warsztat.nazwa,'NIP',nipFmt(K.warsztat.nip),'Adres',K.warsztat.adres]);
   rows.push(['Ubezpieczyciel',K.meta.ubez,'Nr szkody',K.meta.szkoda,'Nr polisy',K.meta.polisa]);
   rows.push(['Obiekt',`${K.obiekt.typ} ${K.obiekt.marka} ${K.obiekt.model}`,'VIN',K.obiekt.vin,'Nr rej',K.obiekt.rej]);
   rows.push([]);
@@ -1434,23 +1487,39 @@ function renderPicker(){
   } else { list=base; }
   list=list.slice(0,300);
   $('picker-count').textContent=`${list.length} / ${catalogParts.length}`;
+  // zbiory liczone RAZ na render — nie per wiersz, bo lista ma do 300 pozycji
+  const wziete=new Set(K.czesci.map(r=>r.katId).filter(Boolean));
+  const wzieteNm=new Set(K.czesci.map(r=>String(r.nazwa||'').trim().toLowerCase()).filter(Boolean));
+  const jest=p=>wziete.has(p.id) || wzieteNm.has(String(p.name||'').trim().toLowerCase());
   $('picker-list').innerHTML = list.length ? list.map(p=>`
-    <div class="pick" onclick="pickPart(${p.id})">
+    <div class="pick${jest(p)?' in':''}" onclick="pickPart(${p.id},this)">
       <img src="${p.photo||placeholder()}" onerror="this.src=placeholderImg()" alt="">
       <div class="nfo"><div class="nm">${esc(p.name)}</div><div class="meta">${esc(p.category||'')}</div></div>
+      ${jest(p)?'<span class="pick-badge">✓ w kosztorysie</span>':''}
       <div class="pr">${zl(p.priceNet)}</div>
     </div>`).join('') : '<div style="padding:18px;text-align:center;color:var(--muted)">Brak wyników</div>';
 }
 function placeholder(){ return placeholderImg(); }
 function placeholderImg(){ return 'data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="42" height="42"><rect width="42" height="42" fill="#e6e9ee"/><text x="21" y="26" font-size="10" text-anchor="middle" fill="#9aa">brak</text></svg>'); }
-function pickPart(id){
+function pickPart(id,el){
   const p=catalogParts.find(x=>x.id===id); if(!p) return;
-  // część (nazwa + cena) → Części
-  K.czesci.push({ id:uid(), nrKat:'', nazwa:p.name, ilosc:1, cenaNetto:p.priceNet, rodzaj:'O',
+  // już w kosztorysie → nie dubluj (dwie sztuki wpisuje się w kolumnie Ilość)
+  const nm=String(p.name||'').trim().toLowerCase();
+  if(K.czesci.some(r=>r.katId===p.id || String(r.nazwa||'').trim().toLowerCase()===nm)){
+    toast('Ta część jest już w kosztorysie','error'); return;
+  }
+  // część (nazwa + cena) → Części; katId łączy wiersz z pozycją katalogu (podświetlenie w pickerze)
+  K.czesci.push({ id:uid(), katId:p.id, nrKat:'', nazwa:p.name, ilosc:1, cenaNetto:p.priceNet, rodzaj:'O',
     rabat:num(K.stawki.rabat), potracenie:num(K.stawki.amort) });
   // ta sama nazwa → Robocizna naprawcza, rodzaj W (wymiana), czas pusty do uzupełnienia
   K.robocizna.push({ id:uid(), opis:p.name, kategoria:'BL', rodzaj:'W', czasRbg:'' });
   recalc(); persist();
+  // oznaczamy kliknięty wiersz w miejscu — renderPicker() przebudowałby 300 pozycji i zgubił scroll
+  if(el && !el.classList.contains('in')){
+    el.classList.add('in');
+    const b=document.createElement('span'); b.className='pick-badge'; b.textContent='✓ w kosztorysie';
+    el.insertBefore(b, el.querySelector('.pr'));
+  }
   toast(`Dodano: ${p.name}`,'ok',1500);
 }
 
