@@ -771,8 +771,11 @@ function nipValid(v){ const d=nipDigits(v); if(d.length!==10) return false;
   return suma!==10 && suma===(+d[9]);   // reszta 10 → numer nieprawidłowy z definicji
 }
 function nipInput(el){
+  // ostrzeżenie zaprasza do poprawki, więc kursor musi zostać tam, gdzie użytkownik pisze:
+  // liczymy pozycję w cyfrach, bo usunięcie myślników skraca tekst przed kursorem
+  const przed=nipDigits(el.value.slice(0,el.selectionStart)).length;
   const d=nipDigits(el.value);
-  if(el.value!==d) el.value=d;          // formatujemy dopiero na blur, żeby kursor nie skakał
+  if(el.value!==d){ el.value=d; el.setSelectionRange(przed,przed); }
   nipWarn(false); touch();
 }
 function nipCheck(){
@@ -1357,7 +1360,8 @@ function exportXlsx(){
   rows.push(['KOSZTORYS NAPRAWY']);
   rows.push(['Nr',K.meta.nr,'Data',K.meta.data]);
   rows.push(['Sporządzający',K.meta.sporz,'Zleceniodawca',K.meta.zlec]);
-  // NIP z myślnikami → Excel trzyma go jako tekst; surowe cyfry zjadłyby wiodące zero
+  // NIP z myślnikami — dla czytelności. (SheetJS zapisuje oba warianty jako tekst, t:"s",
+  // więc o typ komórki martwić się nie trzeba — sprawdzone przez aoa_to_sheet.)
   if(K.meta.sporzTyp==='Warsztat')
     rows.push(['Warsztat',K.warsztat.nazwa,'NIP',nipFmt(K.warsztat.nip),'Adres',K.warsztat.adres]);
   rows.push(['Ubezpieczyciel',K.meta.ubez,'Nr szkody',K.meta.szkoda,'Nr polisy',K.meta.polisa]);
@@ -1488,7 +1492,10 @@ function renderPicker(){
   $('picker-count').textContent=`${list.length} / ${catalogParts.length}`;
   // zbiory liczone RAZ na render — nie per wiersz, bo lista ma do 300 pozycji
   const wziete=new Set(K.czesci.map(r=>r.katId).filter(Boolean));
-  const wzieteNm=new Set(K.czesci.map(r=>String(r.nazwa||'').trim().toLowerCase()).filter(Boolean));
+  // zapas po nazwie TYLKO dla wierszy bez katId (stare zapisy, wpis ręczny, modal) — inaczej
+  // wzięcie jednej pozycji podświetlałoby każdą inną pozycję katalogu o tej samej nazwie
+  const wzieteNm=new Set(K.czesci.filter(r=>!r.katId)
+    .map(r=>String(r.nazwa||'').trim().toLowerCase()).filter(Boolean));
   const jest=p=>wziete.has(p.id) || wzieteNm.has(String(p.name||'').trim().toLowerCase());
   $('picker-list').innerHTML = list.length ? list.map(p=>`
     <div class="pick${jest(p)?' in':''}" onclick="pickPart(${p.id},this)">
@@ -1504,7 +1511,7 @@ function pickPart(id,el){
   const p=catalogParts.find(x=>x.id===id); if(!p) return;
   // już w kosztorysie → nie dubluj (dwie sztuki wpisuje się w kolumnie Ilość)
   const nm=String(p.name||'').trim().toLowerCase();
-  if(K.czesci.some(r=>r.katId===p.id || String(r.nazwa||'').trim().toLowerCase()===nm)){
+  if(K.czesci.some(r=> r.katId ? r.katId===p.id : String(r.nazwa||'').trim().toLowerCase()===nm)){
     toast('Ta część jest już w kosztorysie','error'); return;
   }
   // część (nazwa + cena) → Części; katId łączy wiersz z pozycją katalogu (podświetlenie w pickerze)
