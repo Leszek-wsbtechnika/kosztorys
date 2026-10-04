@@ -25,6 +25,18 @@ CDN (wymaga internetu przy pierwszym ładowaniu): SheetJS `xlsx 0.18.5`, `@supab
 
 Logowanie jest **nieblokujące — odwrotnie niż w katalogu** (gdzie login bramkuje całość). Tu app działa w pełni offline (wpis ręczny + import JSON); login OTP (8-cyfrowy, to samo konto co katalog) służy **wyłącznie do otwarcia pickera części**. Flow: `openLogin` → `sendOtpCode` (`sb.auth.signInWithOtp`) → `verifyOtpCode` (`verifyOtp type:'email'`) → `onConnected` → `loadCatalog` (paginacja `parts` po 1000) → `openPicker`. `init()` cicho wznawia sesję jeśli istnieje. RLS `read_parts` = `TO authenticated USING(true)`, więc każda rola (nawet `nowy`) czyta części. Picker **podświetla pozycje już obecne w kosztorysie** (zielony pasek + plakietka „✓ w kosztorysie"): `renderPicker()` liczy raz na render dwa zbiory — `katId` oraz znormalizowane nazwy (`trim().toLowerCase()`, jak `jestJuz()`) — i nie odpytuje `K.czesci` per wiersz, bo lista ma do 300 pozycji. Klik w pozycję już wziętą **nic nie dodaje** (toast), a klik w nową oznacza wiersz **w miejscu** (`el.classList.add('in')`), bo przebudowa listy gubiłaby pozycję przewijania. `pickPart` zapisuje `katId` w wierszu części — to jedyne miejsce, które je nadaje; zapas po nazwie dotyczy **wyłącznie wierszy bez `katId`** (stare zapisy, wpis ręczny, modal) — gdyby obejmował wszystkie, wzięcie jednej pozycji podświetlałoby i blokowało każdą inną pozycję katalogu o tej samej nazwie, a katalog ma własne wykrywanie duplikatów nazw. Picker → `pickPart` dodaje **dwa** wiersze z jednej części: do `czesci` (nazwa + cena netto) **oraz** do `robocizna` (ta sama nazwa, rodzaj `W`, `czasRbg:''` puste do uzupełnienia). Filtr Kategorii (`#picker-cat`, `catalogCats`/`fillPickerCats`) + wyszukiwarka **wielowyrazowa OR** (każde słowo osobno, unia; ranking wg liczby trafionych słów) — `renderPicker()`. `zestawienie` katalogu **nie jest** dostępne (localStorage origin-scoped) — picker zastępuje „pobieranie zamówienia".
 
+## Integracja z LakierSystem (`lakierowanie.katalogsystem.pl`)
+
+Kalkulator czasu lakierowania (repo `~/Projekty/lakierowanie_dm2`) otwiera kosztorys z `#lakier=<base64url(UTF-8 JSON)>`, payload `{v:1, src:'lakierowanie', rows:[{element, m2, czasRbg}]}`. `importLakierFromHash()`:
+- działa w `init()` po `writeDomFromState()`/`recalc()` oraz na `hashchange`, bo reużyta karta `window.open(…,'kosztorys')` zmienia tylko hash
+- waliduje payload: `v===1`, max 50 wierszy, liczby ≥ 0, `element` ≤ 200 znaków, wiersze z czasem 0 odpadają
+- pyta `confirm`, dokłada wiersze do `K.lakier` z `matKwota:0` (materiał z %), woła `recalc()` + `persist()`
+- **najpierw** czyści hash (`history.replaceState`), więc F5 nie dubluje wierszy
+
+Strażnik `typeof location` jest potrzebny, bo stub w `check-math.js` nie ma `location`/`history`.
+
+Znane ograniczenie: druga, starsza karta kosztorysu trzyma w pamięci stare `K`. Łagodzi to nasłuch `storage` na `kosztorys_v1` (wczytuje stan zapisany przez inną kartę). Jeśli jednak stara karta zapisze coś, zanim zdarzenie dotrze, import zostanie nadpisany.
+
 ## Architektura krytyczna
 
 ### `recalc()` vs `refreshTotals()` — NIE łączyć (bug fokusa)
