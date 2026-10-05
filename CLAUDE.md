@@ -27,13 +27,20 @@ Logowanie jest **nieblokujące — odwrotnie niż w katalogu** (gdzie login bram
 
 ## Integracja z LakierSystem (`lakierowanie.katalogsystem.pl`)
 
-Kalkulator czasu lakierowania (repo `~/Projekty/lakierowanie_dm2`) otwiera kosztorys z `#lakier=<base64url(UTF-8 JSON)>`, payload `{v:1, src:'lakierowanie', rows:[{element, m2, czasRbg}]}`. `importLakierFromHash()`:
+Kalkulator czasu lakierowania (repo `~/Projekty/lakierowanie_dm2`) otwiera kosztorys z `#lakier=<base64url(UTF-8 JSON)>`, payload `{v:1, src:'lakierowanie', rows:[{element, m2, czasRbg, ref?}]}`. `importLakierFromHash()`:
 - działa w `init()` po `writeDomFromState()`/`recalc()` oraz na `hashchange`, bo reużyta karta `window.open(…,'kosztorys')` zmienia tylko hash
 - waliduje payload: `v===1`, max 50 wierszy, liczby ≥ 0, `element` ≤ 200 znaków, wiersze z czasem 0 odpadają
-- pyta `confirm`, dokłada wiersze do `K.lakier` z `matKwota:0` (materiał z %), woła `recalc()` + `persist()`
+- pyta `confirm` („zaktualizować X i dodać Y”), potem `mergeLakier(K.lakier, rows)`: wiersz z tym samym `ref` dostaje nową nazwę, m² i czas (`matKwota` bez zmian), reszta dopisana z `matKwota:0` (materiał z %); `recalc()` + `persist()`
+- dopasowanie **wyłącznie po `ref`**, nigdy po `id` — `idc` startuje od nowa przy `resetAll` i wczytaniu JSON, więc stary `ref` trafiłby w obcy wiersz. Stary LS bez `ref` → zawsze dopisanie
 - **najpierw** czyści hash (`history.replaceState`), więc F5 nie dubluje wierszy
 
 Strażnik `typeof location` jest potrzebny, bo stub w `check-math.js` nie ma `location`/`history`.
+
+Kierunek odwrotny: „→ Policz w LakierSystem” (stopka bloku Lakierowanie) → `sendToLakierSystem()`:
+- `buildLakierSystemPayload(K, ret)`: wiersze `K.lakier` z nazwą i czasem 0/pustym; każdy dostaje (jeśli nie ma) `r.ref = 'k'+K.sid+'-'+r.id` zapisany na wierszu; `nowa = jestJuz(K.czesci,'nazwa',element)`
+- `K.sid` = id dokumentu w `blankState()` (nowy przy `resetAll`; stare zapisy dostają go przy `loadPersist`/imporcie JSON)
+- `window.open(<LS>#kosztorys=<base64url>, 'lakierowanie')`; adres LS: `kosztorys_lakiersystem_url` w localStorage (bez UI, do testów lokalnych), domyślnie produkcja. Zablokowane okno → link do schowka
+- `ret = location.href` bez hasha: LS odsyła wyniki tam, skąd przyszły; `init()` ustawia `window.name='kosztorys'`, więc odpowiedź trafia do tej samej karty
 
 Znane ograniczenie: druga, starsza karta kosztorysu trzyma w pamięci stare `K`. Łagodzi to nasłuch `storage` na `kosztorys_v1` (wczytuje stan zapisany przez inną kartę). Jeśli jednak stara karta zapisze coś, zanim zdarzenie dotrze, import zostanie nadpisany.
 

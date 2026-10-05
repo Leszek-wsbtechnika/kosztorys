@@ -558,7 +558,8 @@ td.lp{text-align:center;color:var(--muted-lt);width:34px;font-family:var(--sans)
           <tbody id="tb-lakier"></tbody>
         </table>
       </div>
-      <div class="tfoot-add"><button class="addbtn" onclick="addLakier()">＋ Dodaj element</button></div>
+      <div class="tfoot-add"><button class="addbtn" onclick="addLakier()">＋ Dodaj element</button>
+        <button class="addbtn no-print" onclick="sendToLakierSystem()" title="Wyślij wiersze bez czasu do kalkulatora lakierowania (dm² i stopień AZT)">→ Policz w LakierSystem</button></div>
       <div class="subtotal">Razem lakierowanie (robocizna + materiał <span id="lak-wsk">40%</span> z robocizny lakierniczej): <span id="st-lakier">0,00 zł</span></div>
     </div>
   </div>
@@ -719,7 +720,9 @@ function blankState(){
     warsztat:{ nazwa:'', adres:'', nip:'' },
     stawki:{ bl:120, mech:120, lak:130, matlak:40, normalia:2, rabat:0, amort:0, vat:23, ubytek:0, udzial:0 },
     czesci:[], robocizna:[], lakier:[], matdod:[],
-    uwagi:'', podpis1:'', podpis2:'', podstawa:'brutto'
+    uwagi:'', podpis1:'', podpis2:'', podstawa:'brutto',
+    // sid = identyfikator dokumentu; wchodzi w ref wierszy lakierowania wysyłanych do LakierSystem
+    sid:Date.now().toString(36)+Math.random().toString(36).slice(2,5)
   };
 }
 
@@ -1576,14 +1579,57 @@ function submitMove(){
 
 /* ================= Import z LakierSystem (lakierowanie.katalogsystem.pl) =================
    Kalkulator otwiera kosztorys z `#lakier=<base64url(UTF-8 JSON)>`, payload
-   {v:1, src:'lakierowanie', rows:[{element, m2, czasRbg}]}. Inny origin → osobny localStorage,
+   {v:1, src:'lakierowanie', rows:[{element, m2, czasRbg, ref?}]}. Inny origin → osobny localStorage,
    więc dane jadą w hashu. Hash czyścimy po odczycie, żeby F5 nie dokładał wierszy drugi raz;
-   reużyta karta (window.open z nazwą 'kosztorys') zmienia tylko hash → nasłuch `hashchange`. */
+   reużyta karta (window.open z nazwą 'kosztorys') zmienia tylko hash → nasłuch `hashchange`.
+   `ref` = stały identyfikator wiersza: wiersz z tym samym ref jest aktualizowany, nie dopisywany. */
 const LAKIER_MAX=50;
 function decodeLakierPayload(s){
   const b64=s.replace(/-/g,'+').replace(/_/g,'/')+'==='.slice((s.length+3)%4);
   const bin=atob(b64);
   return JSON.parse(new TextDecoder().decode(Uint8Array.from(bin,c=>c.charCodeAt(0))));
+}
+function encodeLakierPayload(obj){   // samo btoa() rzuca wyjątek na polskich znakach → TextEncoder
+  const bytes=new TextEncoder().encode(JSON.stringify(obj));
+  let bin=''; bytes.forEach(b=>{ bin+=String.fromCharCode(b); });
+  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+// dopasowanie wyłącznie po ref (nie po id: idc startuje od nowa przy resetAll i wczytaniu JSON)
+function mergeLakier(lista, rows){
+  let zaktualizowane=0, dodane=0;
+  rows.forEach(r=>{
+    const hit=r.ref ? lista.find(x=>x.ref===r.ref) : null;
+    if(hit){ hit.element=r.element; hit.m2=r.m2; hit.czasRbg=r.czasRbg; zaktualizowane++; }   // matKwota bez zmian
+    else { lista.push(Object.assign({ id:uid(), element:r.element, m2:r.m2, czasRbg:r.czasRbg, matKwota:0 }, r.ref?{ ref:r.ref }:{})); dodane++; }
+  });
+  return { zaktualizowane, dodane };
+}
+
+/* ================= Wysyłka do LakierSystem =================
+   „→ Policz w LakierSystem” wysyła wiersze lakierowania z nazwą i bez czasu (zwykle przeniesione „→”
+   z Części) jako `#kosztorys=` {v:1, src:'kosztorys', ret, rows:[{ref, element, m2, nowa}]}.
+   ref = 'k'+sid+'-'+id zostaje na wierszu, LakierSystem odsyła go z czasem → mergeLakier uzupełnia w miejscu.
+   nowa = nazwa jest też w Częściach (nowa część → stopień I / K1R). window.name='kosztorys' (init) sprawia,
+   że odpowiedź z karty LakierSystem (otwartej stąd, więc spokrewnionej przez opener) trafia do tej karty. */
+const LAKIERSYSTEM_URL_DEF='https://lakierowanie.katalogsystem.pl/', LSURL_KEY='kosztorys_lakiersystem_url';
+function lakierSystemUrl(){ try{ return localStorage.getItem(LSURL_KEY)||LAKIERSYSTEM_URL_DEF; }catch(e){ return LAKIERSYSTEM_URL_DEF; } }
+function buildLakierSystemPayload(K, ret){
+  const rows=K.lakier.filter(r=>String(r.element||'').trim() && num(r.czasRbg)<=0).slice(0,LAKIER_MAX).map(r=>{
+    if(!r.ref) r.ref='k'+K.sid+'-'+r.id;
+    const element=String(r.element).trim();
+    return { ref:r.ref, element, m2:Math.max(0,round2(num(r.m2))), nowa:jestJuz(K.czesci,'nazwa',element) };
+  });
+  return { v:1, src:'kosztorys', ret, rows };
+}
+function sendToLakierSystem(){
+  const p=buildLakierSystemPayload(K, location.href.split('#')[0]);
+  if(!p.rows.length){ toast('Brak wierszy bez czasu do policzenia','error'); return; }
+  persist();   // ref nadany wierszom musi przetrwać do powrotu
+  const url=lakierSystemUrl().split('#')[0]+'#kosztorys='+encodeLakierPayload(p);
+  const w=window.open(url,'lakierowanie');
+  if(w){ if(w.focus) w.focus(); toast(`Wysłano ${p.rows.length} poz. do LakierSystem`,'ok'); return; }
+  const kopiuj=navigator.clipboard&&navigator.clipboard.writeText ? navigator.clipboard.writeText(url).then(()=>true,()=>false) : Promise.resolve(false);
+  kopiuj.then(ok=>toast(ok?'Okno zablokowane. Link skopiowany, wklej go w pasek adresu.':'Okno zablokowane przez przeglądarkę','error',4200));
 }
 function importLakierFromHash(){
   if(typeof location==='undefined' || !location.hash || !location.hash.startsWith('#lakier=')) return;
@@ -1596,14 +1642,18 @@ function importLakierFromHash(){
     rows=o.rows.slice(0,LAKIER_MAX).map(r=>({
       element:String(r&&r.element||'').slice(0,200),
       m2:Math.max(0,round2(num(r&&r.m2))),
-      czasRbg:Math.max(0,round2(num(r&&r.czasRbg)))
+      czasRbg:Math.max(0,round2(num(r&&r.czasRbg))),
+      ref:typeof (r&&r.ref)==='string' ? r.ref.slice(0,60) : ''
     })).filter(r=>r.element && r.czasRbg>0);
   }catch(e){ toast('Nieczytelne dane z kalkulatora lakierowania','error'); return; }
   if(!rows.length){ toast('Brak pozycji lakierowania do dodania','error'); return; }
-  if(!confirm(`Dodać ${rows.length} poz. z kalkulatora lakierowania do bloku „Lakierowanie”?`)) return;
-  rows.forEach(r=>K.lakier.push({ id:uid(), element:r.element, m2:r.m2, czasRbg:r.czasRbg, matKwota:0 }));
+  const upd=rows.filter(r=>r.ref && K.lakier.some(x=>x.ref===r.ref)).length, add=rows.length-upd;
+  const co=[upd?`zaktualizować ${upd}`:'', add?`dodać ${add}`:''].filter(Boolean).join(' i ');
+  if(!confirm(`Z kalkulatora lakierowania: ${co} poz. w bloku „Lakierowanie”?`)) return;
+  const w=mergeLakier(K.lakier, rows);
   recalc(); persist();
-  toast(`Dodano ${rows.length} poz. lakierowania`,'ok',3200);
+  const msg=[w.zaktualizowane?`zaktualizowano ${w.zaktualizowane}`:'', w.dodane?`dodano ${w.dodane}`:''].filter(Boolean).join(', ');
+  toast(msg.charAt(0).toUpperCase()+msg.slice(1)+' poz. lakierowania','ok',3200);
 }
 
 /* ================= Init ================= */
@@ -1613,6 +1663,7 @@ async function init(){
   applyKolumny(); initColResize();
   writeDomFromState();
   recalc();
+  window.name='kosztorys';   // odpowiedź z LakierSystem (window.open(…,'kosztorys')) wraca do tej karty
   importLakierFromHash();
   window.addEventListener('hashchange', importLakierFromHash);
   // inna karta kosztorysu zapisała stan (np. import z kalkulatora) → wczytaj, zanim nasz autosave go nadpisze
